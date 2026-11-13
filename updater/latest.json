@@ -1,51 +1,51 @@
 {
-  "version": "0.0.6",
-  "notes": "## Central DevOps Kit v0.0.6\n\n安装包文件名带有系统，下载后可以直接分辨。\n\n- macOS Apple Silicon 安装包：`macOS_AppleSilicon.dmg`\n- macOS Intel 安装包：`macOS_Intel.dmg`\n- macOS 更新包：`macOS_*.app.tar.gz`（应用内更新使用）\n- Windows 安装程序：`Windows_x64_setup.exe`\n- Windows 安装包：`Windows_x64.msi`\n- Linux Debian/Ubuntu 安装包：`Linux_x64.deb`\n- Linux RPM 安装包：`Linux_x64.rpm`\n- Linux AppImage：`Linux_x64.AppImage`\n\n应用内更新读取本 Release 的 `latest.json`。\n\n<!-- bust 1794564410677 -->\n",
-  "pub_date": "2026-11-13T10:06:50.677Z",
+  "version": "0.0.7",
+  "notes": "## Central DevOps Kit v0.0.7\n\nInstallers and updater artifacts are attached.\nThe app reads `latest.json` from this release.\n\n<!-- bust 1794564459060 -->\n",
+  "pub_date": "2026-11-13T10:07:39.060Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_macOS_AppleSilicon.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWNFYjFuVWozMzNyclpjTllheVVSdDd3ODQweU9EMFJRb01yZnp3YSsyYUpFc3VmdUw2c0drTHlZaGFrOG1JYnVCQmgrdTdLSlAyOUVqZ1NOSXVtZXd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNjA1CWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNgo1cmh4UkRORGRHSEwxVmJidW1WdGNyeDd1bGw3cXI1UnZsS0RiRTBHQnY5K09ieCt5SzI5KzRFMmtIMTYzK0t0NGtnaytkdXZUcG5NOUN1VWlzWDZEQT09Cg=="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVU5UDBXbFlhOG9Cb1A0U1Ivd3hsVk43cXpyOTZtSVZzaUpId1FueDYySDlFWlMweUVIK3dKdXRwMVAvQ2VqaW1WRDh4RWpiSElmS0x5UVorRGd4RGdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MjUwCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNwp1QnZKMkdmcWdjUS9jWlpxbm5DVlBJRFJDbFJ2SEpnOUszQkwxeWRXcHVrRmFRL0hkRzdyZ1ZuR1pMYzNtZDU3WnZIU2N5MXZ1bGpMQkpmSUE5QzRCdz09Cg=="
     },
     "darwin-aarch64-app": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_macOS_AppleSilicon.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWNFYjFuVWozMzNyclpjTllheVVSdDd3ODQweU9EMFJRb01yZnp3YSsyYUpFc3VmdUw2c0drTHlZaGFrOG1JYnVCQmgrdTdLSlAyOUVqZ1NOSXVtZXd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNjA1CWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNgo1cmh4UkRORGRHSEwxVmJidW1WdGNyeDd1bGw3cXI1UnZsS0RiRTBHQnY5K09ieCt5SzI5KzRFMmtIMTYzK0t0NGtnaytkdXZUcG5NOUN1VWlzWDZEQT09Cg=="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVU5UDBXbFlhOG9Cb1A0U1Ivd3hsVk43cXpyOTZtSVZzaUpId1FueDYySDlFWlMweUVIK3dKdXRwMVAvQ2VqaW1WRDh4RWpiSElmS0x5UVorRGd4RGdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MjUwCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNwp1QnZKMkdmcWdjUS9jWlpxbm5DVlBJRFJDbFJ2SEpnOUszQkwxeWRXcHVrRmFRL0hkRzdyZ1ZuR1pMYzNtZDU3WnZIU2N5MXZ1bGpMQkpmSUE5QzRCdz09Cg=="
     },
     "darwin-x86_64": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_macOS_Intel.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVZwMmVCb0FNZVNhOU0vdVVQQnBLQ3dWalp6b3FyNlJzbjdjVXZGYzZRZ1UrU3RZQjVKMHVLUk94ZlNnZVNHU1NIMVY1SXVCbC9obEN5Y2dmcStVOVFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNzg0CWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNgpiYnNuRW5GQmpCblNCNXJxZUxydk9JbjdObm5IczRCcnRJNEJ3TndQVys3cFlMcUFnVXVTZXMyN3pOMHdlMTVqWTFNU0tHWjVpMWVYTWc1elYvbmREQT09Cg=="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_x64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVNvYWptNW40RTNab0JmNUFxWk1UU1pnNlluNnJHU3o0VVNSWUZsdUdCTmVvazFOTnoyNmVCZllZV1pkRTdjbmxEQjN0dlE2dGFRMldsM3BYYVI4bXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0NDAxCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNwpsUU4xZ2VUanBPaFp2MkI3dDBOWFhOMmhZMWlwdHloS0VDdW1NdVhSRFA2RTFkTUNISThxa01WM0huR1ZseHRhVmVKa1JnUFVKUk04Ums4T2h0RFFDUT09Cg=="
     },
     "darwin-x86_64-app": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_macOS_Intel.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVZwMmVCb0FNZVNhOU0vdVVQQnBLQ3dWalp6b3FyNlJzbjdjVXZGYzZRZ1UrU3RZQjVKMHVLUk94ZlNnZVNHU1NIMVY1SXVCbC9obEN5Y2dmcStVOVFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNzg0CWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNgpiYnNuRW5GQmpCblNCNXJxZUxydk9JbjdObm5IczRCcnRJNEJ3TndQVys3cFlMcUFnVXVTZXMyN3pOMHdlMTVqWTFNU0tHWjVpMWVYTWc1elYvbmREQT09Cg=="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_x64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVNvYWptNW40RTNab0JmNUFxWk1UU1pnNlluNnJHU3o0VVNSWUZsdUdCTmVvazFOTnoyNmVCZllZV1pkRTdjbmxEQjN0dlE2dGFRMldsM3BYYVI4bXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0NDAxCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LmFwcC50YXIuZ3oJdmVyc2lvbjowLjAuNwpsUU4xZ2VUanBPaFp2MkI3dDBOWFhOMmhZMWlwdHloS0VDdW1NdVhSRFA2RTFkTUNISThxa01WM0huR1ZseHRhVmVKa1JnUFVKUk04Ums4T2h0RFFDUT09Cg=="
     },
     "windows-x86_64": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_Windows_x64_setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWIwWUIxN21PYXpENi9JR0xCU2tKK1pZbEFKOFJNNlV1ekJ2eWRnRFAvOVp4RWE1L0FSSlhUTUhlM3JPbTRsWmQvUzU0eGhIUFpNSW1rZmgzWHdiRWdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNjYzCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC42X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjAuNgp5NjgxYnc1emtHVWN5YWJxWndpelA3akxnQVExRlJmazBnOUtNbDk1RWFja1dyc2g1NktjVTNuNHpzRm1TckRyRzNLNUk2Y0pRUzRjUTRRcnJoNmlCUT09Cg=="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWRnbW9YRGhoV0o1UDkwQmgxMFlhV1BYUUEyckxkNDdVMko4ZXc5WEtNRnpMdnlNRC80WjM1cmZxaUJoQVlnSllJczZJajdtUUhKdFl1QXB6TCswZVFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MzQzCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC43X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjAuNwpwazQ5YXh0UTUrQ01VQ3E3ZDVZQzJiRGY0dE9PUFRxVkxacjRKSHBXTW1HRm9Gc1hPbk9EQ0pKa29SUUhDdFNLTDNkbTVkL1ZYN2lNanZwWXRBVkVCQT09Cg=="
     },
     "windows-x86_64-nsis": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_Windows_x64_setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWIwWUIxN21PYXpENi9JR0xCU2tKK1pZbEFKOFJNNlV1ekJ2eWRnRFAvOVp4RWE1L0FSSlhUTUhlM3JPbTRsWmQvUzU0eGhIUFpNSW1rZmgzWHdiRWdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNjYzCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC42X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjAuNgp5NjgxYnc1emtHVWN5YWJxWndpelA3akxnQVExRlJmazBnOUtNbDk1RWFja1dyc2g1NktjVTNuNHpzRm1TckRyRzNLNUk2Y0pRUzRjUTRRcnJoNmlCUT09Cg=="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWRnbW9YRGhoV0o1UDkwQmgxMFlhV1BYUUEyckxkNDdVMko4ZXc5WEtNRnpMdnlNRC80WjM1cmZxaUJoQVlnSllJczZJajdtUUhKdFl1QXB6TCswZVFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MzQzCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC43X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjAuNwpwazQ5YXh0UTUrQ01VQ3E3ZDVZQzJiRGY0dE9PUFRxVkxacjRKSHBXTW1HRm9Gc1hPbk9EQ0pKa29SUUhDdFNLTDNkbTVkL1ZYN2lNanZwWXRBVkVCQT09Cg=="
     },
     "windows-x86_64-msi": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_Windows_x64.msi",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWJEZmFVUk42Vmd1bFFUclFNOTIrald4clQ3aTQybGdQZUxQT3kxQXUxbGtGS0lqanE2aUdKQzl3Mi9kV050TjVocFh2YmVhd2Z1MmQ3RnZWUjkybWc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNjYzCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC42X3g2NF9lbi1VUy5tc2kJdmVyc2lvbjowLjAuNgpPcEh3Q1RaQVZrZ0xkRm1oQUN2d3BRSTlyZmxJUno1bmZVSnVwamQvQWlZWUJndkxmamcxWDgyN2E3QWJ4ZFFQOFlwKzF2Q2FUUU5HdTRGV2JnTXNEQT09Cg=="
-    },
-    "linux-x86_64-deb": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_Linux_x64.deb",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWNGRmlBR0d0amczUTlqejdTWmxtNklvM2RmWU9IcVZoYTZlQjdiQzFORGZlWVdRNEJvVWdGMXA0R0VKNU9Za1JRbEFQblJDR2RINHdiaU1SQk9aOHd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNzAxCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC42X2FtZDY0LmRlYgl2ZXJzaW9uOjAuMC42CmM1bGFzZGlVclJLWU5YWS9DZituWnR1L1hJYitoOWdrZ2RFeE1YNTcvd2lKTGNQUzNYTlJ1ZXhCZDJkbndkMWd4Slo4ZTVwaUNBS3BrUGpQY05BN0RRPT0K"
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_x64_en-US.msi",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVFZdkFINVZ1djUyMVFDbWNVN3V6YTI3NzNpVkNBRktrV1NEMjE2Z1dXbWk3N1lMNjRvSTRzQTc5UVRaYmR0c24rckpGT2RmaHZ6YjU0YkZlcmFPMndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MzQzCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC43X3g2NF9lbi1VUy5tc2kJdmVyc2lvbjowLjAuNwpCZjAvcHNEbkU5L1BzSmhCVjlhTWNQNWZSTHpINXdCOFlyUEtJQjBBbTlFUS9ETGFLUloxY2lCNUdSWmltcVd0a0N5bUtncHJvV0REZWxiaC91RkdEUT09Cg=="
     },
     "linux-x86_64": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_Linux_x64.AppImage",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVpwZFphMytWdy9xdktTNHQ4bGcvVTJsYUp3MlA2eHByVmJqcXQrKzh6ZStPeHFKUjBuclovMmpqMnVwR0xsa3pBZmdDbjRCUDQwQ2thV0JYRTZ6Y1EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNzAxCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC42X2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4wLjYKZkFBd290c3VMR1oySEYrNjMzbTZ1TzZ5RGVJNjRERGl6TS9odTVoRm9MU1p1OERzRnRWczVuMGdFWnFTYkxTRWwyMy84NHNhRmtVK3RXVDNRclFnRHc9PQo="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_amd64.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWQzOTR5cE96b0hNOVlXTnFQUTNvQ1NFU3l2WXRaY29CWEdFYnRXQWR6NGxPUTlab1RrV2FWLy9ub2VUemxPSlg3SHN6Ykk5cjE0dUoxQzdiUVI0SXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MzEwCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC43X2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4wLjcKWVhFdkx1N2ltWjZCMm1naUZON2hyUE0vL0htZm5jSlcvN0VRNVJjVjNWMG1UV29YV3dxdnJIOFA2RWEwZTZmTVA2V0gzTlk0cEh4L3VuQ0YvdVRqREE9PQo="
     },
     "linux-x86_64-appimage": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_Linux_x64.AppImage",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVpwZFphMytWdy9xdktTNHQ4bGcvVTJsYUp3MlA2eHByVmJqcXQrKzh6ZStPeHFKUjBuclovMmpqMnVwR0xsa3pBZmdDbjRCUDQwQ2thV0JYRTZ6Y1EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNzAxCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC42X2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4wLjYKZkFBd290c3VMR1oySEYrNjMzbTZ1TzZ5RGVJNjRERGl6TS9odTVoRm9MU1p1OERzRnRWczVuMGdFWnFTYkxTRWwyMy84NHNhRmtVK3RXVDNRclFnRHc9PQo="
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_amd64.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWQzOTR5cE96b0hNOVlXTnFQUTNvQ1NFU3l2WXRaY29CWEdFYnRXQWR6NGxPUTlab1RrV2FWLy9ub2VUemxPSlg3SHN6Ykk5cjE0dUoxQzdiUVI0SXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MzEwCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC43X2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4wLjcKWVhFdkx1N2ltWjZCMm1naUZON2hyUE0vL0htZm5jSlcvN0VRNVJjVjNWMG1UV29YV3dxdnJIOFA2RWEwZTZmTVA2V0gzTlk0cEh4L3VuQ0YvdVRqREE9PQo="
+    },
+    "linux-x86_64-deb": {
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit_0.0.7_amd64.deb",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVIzRHZVN2IwQmNOcUpGdGswM21STFFKakRyZlhZRzF0MVMzSHBNVlNWTmJCR2Q3R05zQ0JORjVXbjZzdVBuU3MwVkpGZ1JOWStTbnU0K1NMd0hYWkFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MzEwCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0XzAuMC43X2FtZDY0LmRlYgl2ZXJzaW9uOjAuMC43Cmh2RC9pVFpjanN4dCtUQmZ6UUlxYmpqdXJMNjZaQXNGUlcyOTY3Z2RkUDNJbExmTDFESzRjelFPT3RJUTdqYURZVFBIRDJlcVBtMWJ6YiswSU5wakRRPT0K"
     },
     "linux-x86_64-rpm": {
-      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.6/Central-DevOps-Kit_0.0.6_Linux_x64.rpm",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYVpCbGlrbmw1OENTZWYzdm5sNTJYWjNxdkpuY0dOTFcyWWhxWXRIaHFNQm5BNXNJZHdLS1Jsb0ZpaHgxbzBWVlVOZmU5TldubFpRN3h2Z290YkNieUFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTYzNzAxCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LTAuMC42LTEueDg2XzY0LnJwbQl2ZXJzaW9uOjAuMC42CnF5T25jeVBIcTM5RDlPNEpod3Z1Z3J5aVVod1NldmVmVWNGYXRnWHRRRlc1Rk1pMk5oaWs0SlN2cTR4a3ZtR0NISEFhQVBlRlN4QlpYMGlydnFTTkN3PT0K"
+      "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.7/Central.DevOps.Kit-0.0.7-1.x86_64.rpm",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVERjZVNjM05oYWZjRVh4K0VrYmJNN0xvSU5SMlZHbEIzK2NRdDgzMTVWUjR5OG1iQkh6bUx6RVJJd2pKWnI2K1QzZ3VlTUltQkY1UDJ1SmtpNk5aWUxSZXh2ZWtvd2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0MzEwCWZpbGU6Q2VudHJhbCBEZXZPcHMgS2l0LTAuMC43LTEueDg2XzY0LnJwbQl2ZXJzaW9uOjAuMC43CmgrZU9SbXRKV1UzR2RWc3dpeEhCUVZnMlg1NGdwVHBjZ3Q5ZkRIS2hGcXFDVHRreitWV2V6UkpQdXhUV1J6cXhMSXR1QnZXZ0xEcE9sYktkeVJZQURBPT0K"
     }
   }
 }
