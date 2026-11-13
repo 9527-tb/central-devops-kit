@@ -52,14 +52,23 @@ export function readConfiguredVersion() {
   return tauri.version;
 }
 
+function versionField(file, source) {
+  const pattern = file.endsWith(".toml")
+    ? /^version = "([^"]+)"/m
+    : /"version"\s*:\s*"([^"]+)"/;
+  return source.match(pattern)?.[1] ?? null;
+}
+
 export function applyVersion(version) {
   if (!parseVersion(version)) throw new Error(`Invalid version: ${version}`);
   for (const file of VERSION_FILES) {
     const original = readFileSync(file, "utf8");
+    const current = versionField(file, original);
+    if (!current) throw new Error(`Version field not found in ${file}`);
+    if (current === version) continue;
     const updated = file.endsWith(".toml")
       ? original.replace(/^version = "[^"]+"/m, `version = "${version}"`)
       : original.replace(/("version"\s*:\s*")[^"]+(")/, `$1${version}$2`);
-    if (updated === original) throw new Error(`Version field not found in ${file}`);
     writeFileSync(file, updated);
   }
 }
