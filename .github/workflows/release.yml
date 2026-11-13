@@ -3,11 +3,52 @@ name: Release
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "v*"
+    branches:
+      - master
+
+concurrency:
+  group: release-master
+  cancel-in-progress: false
 
 jobs:
+  prepare:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - id: meta
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          version="$(node scripts/release-version.mjs)"
+          sha="${GITHUB_SHA}"
+          if ! git diff --quiet; then
+            git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
+            git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "chore: release v${version} [skip ci]"
+            git push origin HEAD:master
+            sha="$(git rev-parse HEAD)"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "Publishing v${version} from ${sha}"
+
   release:
+    needs: prepare
     permissions:
       contents: write
     strategy:
@@ -25,6 +66,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Check version files
         shell: bash
@@ -40,17 +83,6 @@ jobs:
           }
           console.log(`App version ${pkg}`);
           EOF
-
-      - name: Check tag matches app version
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          version=$(node --input-type=module -e "import { readFileSync } from 'node:fs'; console.log(JSON.parse(readFileSync('src-tauri/tauri.conf.json','utf8')).version)")
-          tag="${GITHUB_REF_NAME#v}"
-          if [ "$tag" != "$version" ]; then
-            echo "Tag v$tag does not match app version $version"
-            exit 1
-          fi
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -84,7 +116,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: Central DevOps Kit v__VERSION__
-          releaseBody: "Installers for this version are attached."
+          releaseBody: "Built from master."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

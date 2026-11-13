@@ -38,9 +38,7 @@ pnpm dev
 
 版本从 **0.0.1** 开始。`package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 保持同一版本号。
 
-代码合并到 `master` 后，GitLab CI 会发布一个新版本。没有历史标签时发布配置里的版本；提交里已经把版本调得更高时，按那个版本发布；否则在最新标签上把补丁号加一。共享 Runner 构建 deb、AppImage、rpm，并创建 GitLab Release。
-
-在 GitHub 上推送匹配的标签 `v*`，或手动运行 Release，会构建 macOS、Windows、Linux 并发布 GitHub Release。
+代码合并到 `master` 后，GitHub Actions 会发布一个新版本。没有历史标签时发布配置里的版本；提交里已经把版本调得更高时，按那个版本发布；否则在最新标签上把补丁号加一。然后构建 macOS（Apple 芯片和 Intel）、Windows、Linux 安装包，并发布 GitHub Release。
 
 ## 应用内更新
 
