@@ -39,7 +39,6 @@ const progressStatus = computed(() =>
       <a-progress
         :percent="downloadPercent"
         :status="progressStatus"
-        size="small"
       />
       <p class="update-progress-hint">{{ t("updateDownloading") }}</p>
     </div>

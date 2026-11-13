@@ -1,5 +1,5 @@
 /**
- * 设置状态：外观、语言、GitLab Access Token、保存。
+ * 设置状态：外观、语言、GitLab group 地址、Access Token、保存。
  */
 
 import { ref } from "vue";
@@ -23,6 +23,7 @@ export function emptySettings() {
     },
     gitlab: {
       accessToken: "",
+      groupUrl: "",
     },
   };
 }
@@ -47,6 +48,7 @@ export function normalizeSettings(raw) {
     gitlab: {
       accessToken:
         typeof raw.gitlab?.accessToken === "string" ? raw.gitlab.accessToken : "",
+      groupUrl: typeof raw.gitlab?.groupUrl === "string" ? raw.gitlab.groupUrl : "",
     },
   };
 }

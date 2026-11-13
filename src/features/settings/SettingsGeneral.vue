@@ -120,7 +120,7 @@ function onCheckUpdateClick() {
             <div class="cfg-hint">{{ t("appVersionHint", { version: appVersionLabel }) }}</div>
           </div>
           <a-badge :dot="updateAvailable" :offset="[-2, 2]">
-            <a-button size="small" :loading="updateChecking" @click="onCheckUpdateClick">
+            <a-button :loading="updateChecking" @click="onCheckUpdateClick">
               {{ t("checkForUpdate") }}
             </a-button>
           </a-badge>

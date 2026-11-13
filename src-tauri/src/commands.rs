@@ -31,7 +31,46 @@ pub fn exit_app(app: AppHandle) {
 #[tauri::command]
 pub async fn gitlab_load_variables(
     token: String,
+    group_url: String,
     page: Option<u32>,
 ) -> crate::gitlab::GitlabLoadResult {
-    crate::gitlab::load_variables(token, page.unwrap_or(1)).await
+    crate::gitlab::load_variables(token, group_url, page.unwrap_or(1)).await
+}
+
+#[tauri::command]
+pub async fn gitlab_delete_variable(
+    token: String,
+    group_url: String,
+    key: String,
+    environment_scope: String,
+) -> crate::gitlab::GitlabActionResult {
+    crate::gitlab::delete_variable(token, group_url, key, environment_scope).await
+}
+
+#[tauri::command]
+pub async fn gitlab_create_variable(
+    token: String,
+    group_url: String,
+    key: String,
+    value: String,
+    environment_scope: String,
+    variable_type: String,
+    is_protected: bool,
+    is_masked: bool,
+    expanded: bool,
+    description: String,
+) -> crate::gitlab::GitlabActionResult {
+    crate::gitlab::create_variable(
+        token,
+        group_url,
+        key,
+        value,
+        environment_scope,
+        variable_type,
+        is_protected,
+        is_masked,
+        expanded,
+        description,
+    )
+    .await
 }

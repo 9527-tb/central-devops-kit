@@ -15,7 +15,7 @@
         "title": "Central DevOps Kit",
         "width": 1000,
         "height": 600,
-        "decorations": false
+        "decorations": true
       }
     ],
     "security": {

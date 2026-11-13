@@ -1,10 +1,10 @@
 <!--
-  左侧图标轨。上方放功能入口，设置固定在底部。
+  左侧图标轨。上方放功能入口，设置在底部，检查更新在最下方。
   加功能时往 items 里追加一项（不要设 bottom）。
 -->
 <script setup>
-import { computed } from "vue";
-import { GitlabOutlined, SettingOutlined } from "@antdv-next/icons";
+import { computed, inject } from "vue";
+import { CloudDownloadOutlined, GitlabOutlined, SettingOutlined } from "@antdv-next/icons";
 import { appMode, goGitlab, goHome, goSettings } from "../../stores/appNav.js";
 
 defineProps({
@@ -12,6 +12,14 @@ defineProps({
 });
 
 const mode = computed(() => appMode.value);
+const appUpdate = inject("appUpdate", null);
+const updateAvailable = computed(() => !!appUpdate?.updateAvailable?.value);
+const updateChecking = computed(() => !!appUpdate?.checking?.value);
+const appVersion = computed(() => appUpdate?.appVersion?.value || "—");
+
+function onCheckUpdate() {
+  appUpdate?.checkForUpdate?.({ silent: false });
+}
 
 const items = computed(() => [
   {
@@ -58,6 +66,18 @@ const bottomItems = computed(() => items.value.filter((item) => item.bottom));
     >
       <component :is="item.icon" class="app-rail-icon" />
     </button>
+    <a-badge class="app-rail-update" :dot="updateAvailable" :offset="[-4, 6]">
+      <button
+        type="button"
+        class="app-rail-btn"
+        :class="{ loading: updateChecking }"
+        :title="`${t('checkForUpdate')} · v${appVersion}`"
+        :disabled="updateChecking"
+        @click="onCheckUpdate"
+      >
+        <CloudDownloadOutlined class="app-rail-icon" />
+      </button>
+    </a-badge>
   </nav>
 </template>
 
@@ -118,5 +138,15 @@ const bottomItems = computed(() => items.value.filter((item) => item.bottom));
   width: 16px;
   height: 16px;
   display: block;
+}
+.app-rail-update {
+  display: flex;
+  line-height: 1;
+}
+.app-rail-btn.loading {
+  opacity: 0.7;
+}
+.app-rail-btn:disabled {
+  cursor: default;
 }
 </style>

@@ -1,11 +1,9 @@
-//! 读取固定 GitLab 路径下的 CI/CD 变量。
-//! Access Token 只从参数进入请求头，不写入日志。
+//! 读取用户配置的 GitLab group 下的 CI/CD 变量。
+//! group 地址和 Access Token 只从参数进入，不写入源码。
 
 use serde::Serialize;
 use std::time::Duration;
 
-const GITLAB_ORIGIN: &str = "https://iqvia.gitlab-dedicated.com";
-const GITLAB_PATH: &str = "edp/asia-pacific/psplink";
 const FETCH_PAGE_SIZE: u32 = 100;
 
 #[derive(Serialize)]
@@ -103,16 +101,21 @@ struct VariablePage {
     rows: Vec<GitlabVariableRow>,
 }
 
-pub async fn load_variables(token: String, _page: u32) -> GitlabLoadResult {
+pub async fn load_variables(token: String, group_url: String, _page: u32) -> GitlabLoadResult {
     let token = token.trim();
-    if token.is_empty() {
+    let group_url = group_url.trim();
+    if token.is_empty() || group_url.is_empty() {
         return GitlabLoadResult::empty("missing", "missing", "");
     }
+    let (origin, path) = match parse_group_address(group_url) {
+        Ok(value) => value,
+        Err(()) => return GitlabLoadResult::empty("failed", "bad_address", ""),
+    };
     let client = match http_client() {
         Ok(client) => client,
         Err(message) => return GitlabLoadResult::empty("failed", "network", message),
     };
-    match load_with(&client, token).await {
+    match load_with(&client, token, &origin, &path).await {
         Ok(result) => result,
         Err(ApiError::Invalid) => GitlabLoadResult::empty("invalid", "unauthorized", ""),
         Err(ApiError::NotFound) => GitlabLoadResult::empty("failed", "not_found", ""),
@@ -123,16 +126,263 @@ pub async fn load_variables(token: String, _page: u32) -> GitlabLoadResult {
     }
 }
 
-async fn load_with(client: &reqwest::Client, token: &str) -> Result<GitlabLoadResult, ApiError> {
-    let username = probe_user(client, token).await?;
-    let resource = match lookup(client, token, "projects", "project").await? {
-        Some(resource) => resource,
-        None => lookup(client, token, "groups", "group")
-            .await?
-            .ok_or(ApiError::NotFound)?,
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitlabActionResult {
+    pub status: String,
+    pub code: String,
+    pub message: String,
+}
+
+impl GitlabActionResult {
+    fn ok() -> Self {
+        Self {
+            status: "ok".into(),
+            code: String::new(),
+            message: String::new(),
+        }
+    }
+
+    fn failed(code: &str, message: impl Into<String>) -> Self {
+        let status = if code == "missing" || code == "invalid" {
+            code
+        } else {
+            "failed"
+        };
+        Self {
+            status: status.into(),
+            code: code.into(),
+            message: message.into(),
+        }
+    }
+}
+
+pub async fn delete_variable(
+    token: String,
+    group_url: String,
+    key: String,
+    environment_scope: String,
+) -> GitlabActionResult {
+    let token = token.trim();
+    let group_url = group_url.trim();
+    let key = key.trim();
+    let scope = environment_scope.trim();
+    if token.is_empty() || group_url.is_empty() || key.is_empty() {
+        return GitlabActionResult::failed("missing", "");
+    }
+    let (origin, path) = match parse_group_address(group_url) {
+        Ok(value) => value,
+        Err(()) => return GitlabActionResult::failed("bad_address", ""),
     };
-    let page = list_variables(client, token, &resource).await?;
+    let client = match http_client() {
+        Ok(client) => client,
+        Err(message) => return GitlabActionResult::failed("network", message),
+    };
+    match delete_with(&client, token, &origin, &path, key, scope).await {
+        Ok(()) => GitlabActionResult::ok(),
+        Err(ApiError::Invalid) => GitlabActionResult::failed("invalid", ""),
+        Err(ApiError::NotFound) => GitlabActionResult::failed("not_found", ""),
+        Err(ApiError::Forbidden) => GitlabActionResult::failed("forbidden", ""),
+        Err(ApiError::BadResponse) => GitlabActionResult::failed("bad_response", ""),
+        Err(ApiError::Network(message)) => GitlabActionResult::failed("network", message),
+        Err(ApiError::Status(message)) => GitlabActionResult::failed("error", message),
+    }
+}
+
+async fn delete_with(
+    client: &reqwest::Client,
+    token: &str,
+    origin: &str,
+    path: &str,
+    key: &str,
+    scope: &str,
+) -> Result<(), ApiError> {
+    let resource = lookup_group(client, token, origin, path).await?;
+    let url = format!(
+        "{origin}/api/v4/groups/{}/variables/{}",
+        resource.id,
+        encode_component(key)
+    );
+    let http = delete_text(
+        client,
+        token,
+        &url,
+        &[("filter[environment_scope]", scope)],
+    )
+    .await?;
+    if http.status == 404 {
+        return Err(ApiError::NotFound);
+    }
+    if http.status == 401 {
+        return Err(ApiError::Invalid);
+    }
+    if http.status == 403 {
+        return Err(ApiError::Forbidden);
+    }
+    ensure_ok(&http)
+}
+
+pub async fn create_variable(
+    token: String,
+    group_url: String,
+    key: String,
+    value: String,
+    environment_scope: String,
+    variable_type: String,
+    is_protected: bool,
+    is_masked: bool,
+    expanded: bool,
+    description: String,
+) -> GitlabActionResult {
+    let token = token.trim();
+    let group_url = group_url.trim();
+    let key = key.trim();
+    let scope = environment_scope.trim();
+    let description = description.trim();
+    if token.is_empty() || group_url.is_empty() || scope.is_empty() {
+        return GitlabActionResult::failed("missing", "");
+    }
+    if !variable_key_ok(key) {
+        return GitlabActionResult::failed("bad_key", "");
+    }
+    let (origin, path) = match parse_group_address(group_url) {
+        Ok(value) => value,
+        Err(()) => return GitlabActionResult::failed("bad_address", ""),
+    };
+    let client = match http_client() {
+        Ok(client) => client,
+        Err(message) => return GitlabActionResult::failed("network", message),
+    };
+    let kind = if variable_type.trim() == "file" {
+        "file"
+    } else {
+        "env_var"
+    };
+    match create_with(
+        &client,
+        token,
+        &origin,
+        &path,
+        key,
+        &value,
+        scope,
+        kind,
+        is_protected,
+        is_masked,
+        expanded,
+        description,
+    )
+    .await
+    {
+        Ok(()) => GitlabActionResult::ok(),
+        Err(ApiError::Invalid) => GitlabActionResult::failed("invalid", ""),
+        Err(ApiError::NotFound) => GitlabActionResult::failed("not_found", ""),
+        Err(ApiError::Forbidden) => GitlabActionResult::failed("forbidden", ""),
+        Err(ApiError::BadResponse) => GitlabActionResult::failed("bad_response", ""),
+        Err(ApiError::Network(message)) => GitlabActionResult::failed("network", message),
+        Err(ApiError::Status(message)) => GitlabActionResult::failed("error", message),
+    }
+}
+
+async fn create_with(
+    client: &reqwest::Client,
+    token: &str,
+    origin: &str,
+    path: &str,
+    key: &str,
+    value: &str,
+    scope: &str,
+    variable_type: &str,
+    is_protected: bool,
+    is_masked: bool,
+    expanded: bool,
+    description: &str,
+) -> Result<(), ApiError> {
+    let resource = lookup_group(client, token, origin, path).await?;
+    let url = format!("{origin}/api/v4/groups/{}/variables", resource.id);
+    let body = NewVariable {
+        key,
+        value,
+        variable_type,
+        protected: is_protected,
+        masked: is_masked,
+        raw: !expanded,
+        environment_scope: scope,
+        description,
+    };
+    let http = post_json(client, token, &url, &body).await?;
+    if http.status == 401 {
+        return Err(ApiError::Invalid);
+    }
+    if http.status == 403 {
+        return Err(ApiError::Forbidden);
+    }
+    if http.status == 404 {
+        return Err(ApiError::NotFound);
+    }
+    ensure_ok(&http)
+}
+
+fn variable_key_ok(key: &str) -> bool {
+    !key.is_empty() && key.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+
+#[derive(Serialize)]
+struct NewVariable<'a> {
+    key: &'a str,
+    value: &'a str,
+    variable_type: &'a str,
+    protected: bool,
+    masked: bool,
+    raw: bool,
+    environment_scope: &'a str,
+    description: &'a str,
+}
+
+fn encode_component(raw: &str) -> String {
+    let mut out = String::new();
+    for byte in raw.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*byte as char);
+            }
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    out
+}
+
+async fn load_with(
+    client: &reqwest::Client,
+    token: &str,
+    origin: &str,
+    path: &str,
+) -> Result<GitlabLoadResult, ApiError> {
+    let username = probe_user(client, token, origin).await?;
+    let resource = lookup_group(client, token, origin, path).await?;
+    let page = list_variables(client, token, origin, &resource).await?;
     Ok(GitlabLoadResult::ready(username, resource, page))
+}
+
+fn parse_group_address(raw: &str) -> Result<(String, String), ()> {
+    let url = reqwest::Url::parse(raw).map_err(|_| ())?;
+    if url.scheme() != "http" && url.scheme() != "https" {
+        return Err(());
+    }
+    let origin = url.origin().ascii_serialization();
+    if !origin.starts_with("http://") && !origin.starts_with("https://") {
+        return Err(());
+    }
+    let path = url.path().trim_matches('/');
+    if path.is_empty() {
+        return Err(());
+    }
+    Ok((origin, path.to_string()))
+}
+
+fn group_api_url(origin: &str, path: &str) -> String {
+    let encoded = path.replace('/', "%2F");
+    format!("{origin}/api/v4/groups/{encoded}")
 }
 
 fn http_client() -> Result<reqwest::Client, String> {
@@ -144,13 +394,13 @@ fn http_client() -> Result<reqwest::Client, String> {
         .map_err(|err| err.to_string())
 }
 
-async fn probe_user(client: &reqwest::Client, token: &str) -> Result<String, ApiError> {
-    let url = format!("{GITLAB_ORIGIN}/api/v4/user");
+async fn probe_user(client: &reqwest::Client, token: &str, origin: &str) -> Result<String, ApiError> {
+    let url = format!("{origin}/api/v4/user");
     let http = get_text(client, token, &url, &[]).await?;
     if http.status == 401 {
         return Err(ApiError::Invalid);
     }
-    // 没有 read_user 时 /user 会 403，项目变量仍可能读得到。
+    // 没有 read_user 时 /user 会 403，group 变量仍可能读得到。
     if http.status == 403 {
         return Ok(String::new());
     }
@@ -159,15 +409,15 @@ async fn probe_user(client: &reqwest::Client, token: &str) -> Result<String, Api
     Ok(user.username)
 }
 
-async fn lookup(
+async fn lookup_group(
     client: &reqwest::Client,
     token: &str,
-    collection: &str,
-    kind: &str,
-) -> Result<Option<Resource>, ApiError> {
-    let http = get_text(client, token, &resource_url(collection), &[]).await?;
+    origin: &str,
+    path: &str,
+) -> Result<Resource, ApiError> {
+    let http = get_text(client, token, &group_api_url(origin, path), &[]).await?;
     if http.status == 404 {
-        return Ok(None);
+        return Err(ApiError::NotFound);
     }
     if http.status == 401 {
         return Err(ApiError::Invalid);
@@ -177,32 +427,28 @@ async fn lookup(
     }
     ensure_ok(&http)?;
     let raw: RawResource = serde_json::from_str(&http.body).map_err(|_| ApiError::BadResponse)?;
-    let path = if !raw.path_with_namespace.is_empty() {
-        raw.path_with_namespace
-    } else if !raw.full_path.is_empty() {
+    let resolved = if !raw.full_path.is_empty() {
         raw.full_path
+    } else if !raw.path_with_namespace.is_empty() {
+        raw.path_with_namespace
     } else {
-        GITLAB_PATH.into()
+        path.to_string()
     };
-    Ok(Some(Resource {
-        kind: kind.into(),
+    Ok(Resource {
+        kind: "group".into(),
         name: raw.name,
-        path,
+        path: resolved,
         id: raw.id,
-    }))
+    })
 }
 
 async fn list_variables(
     client: &reqwest::Client,
     token: &str,
+    origin: &str,
     resource: &Resource,
 ) -> Result<VariablePage, ApiError> {
-    let collection = if resource.kind == "group" {
-        "groups"
-    } else {
-        "projects"
-    };
-    let url = format!("{GITLAB_ORIGIN}/api/v4/{collection}/{}/variables", resource.id);
+    let url = format!("{origin}/api/v4/groups/{}/variables", resource.id);
     let mut page = 1u32;
     let mut rows = Vec::new();
     for _ in 0..100 {
@@ -288,6 +534,60 @@ async fn get_text(
     })
 }
 
+async fn delete_text(
+    client: &reqwest::Client,
+    token: &str,
+    url: &str,
+    query: &[(&str, &str)],
+) -> Result<HttpText, ApiError> {
+    let response = client
+        .delete(url)
+        .header("PRIVATE-TOKEN", token)
+        .header("Accept", "application/json")
+        .query(query)
+        .send()
+        .await
+        .map_err(|err| ApiError::Network(err.to_string()))?;
+    let status = response.status().as_u16();
+    let body = response
+        .text()
+        .await
+        .map_err(|err| ApiError::Network(err.to_string()))?;
+    Ok(HttpText {
+        status,
+        next_page: None,
+        body,
+    })
+}
+
+async fn post_json(
+    client: &reqwest::Client,
+    token: &str,
+    url: &str,
+    body: &impl Serialize,
+) -> Result<HttpText, ApiError> {
+    let payload = serde_json::to_string(body).map_err(|_| ApiError::BadResponse)?;
+    let response = client
+        .post(url)
+        .header("PRIVATE-TOKEN", token)
+        .header("Accept", "application/json")
+        .header("Content-Type", "application/json")
+        .body(payload)
+        .send()
+        .await
+        .map_err(|err| ApiError::Network(err.to_string()))?;
+    let status = response.status().as_u16();
+    let body = response
+        .text()
+        .await
+        .map_err(|err| ApiError::Network(err.to_string()))?;
+    Ok(HttpText {
+        status,
+        next_page: None,
+        body,
+    })
+}
+
 fn header_u32(headers: &reqwest::header::HeaderMap, name: &str) -> Option<u32> {
     headers
         .get(name)
@@ -333,11 +633,6 @@ fn clip(text: &str) -> String {
     text.chars().take(180).collect()
 }
 
-fn resource_url(collection: &str) -> String {
-    let encoded = GITLAB_PATH.replace('/', "%2F");
-    format!("{GITLAB_ORIGIN}/api/v4/{collection}/{encoded}")
-}
-
 #[derive(serde::Deserialize)]
 struct RawUser {
     #[serde(default)]
@@ -379,12 +674,28 @@ struct RawVariable {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn project_path_keeps_encoded_slash() {
-        let url = reqwest::Url::parse(&super::resource_url("projects")).unwrap();
-        assert!(
-            url.as_str().contains("edp%2Fasia-pacific%2Fpsplink"),
-            "{}",
-            url.as_str()
-        );
+    fn group_address_encodes_nested_path() {
+        let (origin, path) =
+            super::parse_group_address("https://gitlab.example.com/parent/child/").unwrap();
+        assert_eq!(origin, "https://gitlab.example.com");
+        assert_eq!(path, "parent/child");
+        let url = super::group_api_url(&origin, &path);
+        assert!(url.contains("/api/v4/groups/parent%2Fchild"), "{url}");
+        assert!(super::parse_group_address("https://gitlab.example.com").is_err());
+        assert!(super::parse_group_address("gitlab.example.com/parent").is_err());
+    }
+
+    #[test]
+    fn variable_key_is_encoded_in_the_path() {
+        assert_eq!(super::encode_component("API_TOKEN"), "API_TOKEN");
+        assert_eq!(super::encode_component("a b/c"), "a%20b%2Fc");
+    }
+
+    #[test]
+    fn variable_key_allows_letters_digits_and_underscore() {
+        assert!(super::variable_key_ok("API_TOKEN"));
+        assert!(!super::variable_key_ok(""));
+        assert!(!super::variable_key_ok("has space"));
+        assert!(!super::variable_key_ok("a-b"));
     }
 }

@@ -5,7 +5,6 @@ import { locale, colorThemeId } from "./stores/settings.js";
 import { appMode } from "./stores/appNav.js";
 import { useSettings } from "./features/settings/useSettings.js";
 import { useAppUpdate } from "./features/app/useAppUpdate.js";
-import AppTitlebar from "./features/app/AppTitlebar.vue";
 import AppRail from "./features/app/AppRail.vue";
 import UpdateDialog from "./features/app/UpdateDialog.vue";
 import SettingsView from "./views/SettingsView.vue";
@@ -67,7 +66,6 @@ onBeforeUnmount(() => {
 <template>
   <a-config-provider :theme="theme">
     <div class="app-shell">
-      <AppTitlebar :t="t" />
       <div class="app-body">
         <AppRail :t="t" />
         <div class="app-main">

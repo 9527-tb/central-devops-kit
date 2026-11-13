@@ -1,11 +1,11 @@
 <!--
-  GitLab 变量页。进入后先检查 Access Token，有效再拉取固定路径的 CI/CD 变量。
-  检查和读取时遮住标题以下的内容，避免加载时继续操作。
+  GitLab 变量页。group 地址和 Access Token 存在本机设置里。
+  未设置时和点击设置时使用同一个弹窗。读取时遮住标题以下的内容。
 -->
 <script setup>
-import { computed } from "vue";
+import { computed, reactive, ref } from "vue";
 import { message } from "antdv-next";
-import { EditOutlined, ReloadOutlined } from "@antdv-next/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SettingOutlined } from "@antdv-next/icons";
 import { createTranslator } from "../i18n/index.js";
 import { locale } from "../stores/settings.js";
 import { useGitlabVariables } from "../features/gitlab/useGitlabVariables.js";
@@ -17,30 +17,96 @@ const {
   status,
   messageText,
   tokenInput,
+  groupUrlInput,
+  settingsOpen,
   rows,
   refresh,
-  saveToken,
-  editToken,
+  openSettings,
+  closeSettings,
+  saveGitlabSettings,
+  removeVariable,
+  createVariable,
 } = useGitlabVariables();
 
 const STAGING = "connect-staging";
 const PRODUCTION = "connect-production";
 
-const needsToken = computed(
-  () => status.value === "missing" || status.value === "invalid" || status.value === "edit",
+const needsConfig = computed(() => status.value === "missing" || status.value === "invalid");
+const setupMessage = computed(() =>
+  status.value === "invalid" ? t("gitlabTokenInvalid") : t("gitlabTokenMissing"),
 );
-const tokenAlertType = computed(() => (status.value === "invalid" ? "error" : "warning"));
-const tokenAlert = computed(() => {
-  if (status.value === "invalid") return t("gitlabTokenInvalid");
-  if (status.value === "edit") return t("gitlabTokenReplace");
-  return t("gitlabTokenMissing");
-});
-const tokenTitle = computed(() =>
-  status.value === "missing" ? t("gitlabTokenSetTitle") : t("gitlabTokenResetTitle"),
-);
-const tokenSub = computed(() =>
-  status.value === "missing" ? t("gitlabTokenSetSub") : t("gitlabTokenResetSub"),
-);
+const DELETE_WORD = "DELETE";
+const deleteTarget = ref(null);
+const deleteConfirmText = ref("");
+const deleting = ref(false);
+const deleteReady = computed(() => deleteConfirmText.value.trim() === DELETE_WORD);
+
+function openDelete(record) {
+  deleteTarget.value = record;
+  deleteConfirmText.value = "";
+}
+
+function closeDelete() {
+  if (deleting.value) return;
+  deleteTarget.value = null;
+  deleteConfirmText.value = "";
+}
+
+async function submitDelete() {
+  if (!deleteTarget.value || deleting.value) return;
+  if (!deleteReady.value) {
+    message.warning(t("gitlabDeleteNeedConfirm"));
+    return;
+  }
+  const record = deleteTarget.value;
+  deleting.value = true;
+  const ok = await removeVariable(record);
+  deleteTarget.value = null;
+  deleteConfirmText.value = "";
+  deleting.value = false;
+  if (ok) refresh();
+}
+
+const createOpen = ref(false);
+const creating = ref(false);
+const createForm = reactive(emptyCreateForm());
+const scopeOptions = [
+  { value: STAGING, label: STAGING },
+  { value: PRODUCTION, label: PRODUCTION },
+];
+
+function emptyCreateForm() {
+  return {
+    environmentScope: STAGING,
+    key: "",
+    value: "",
+    description: "",
+    variableType: "env_var",
+    isProtected: false,
+    isMasked: false,
+    expanded: false,
+  };
+}
+
+function openCreate() {
+  Object.assign(createForm, emptyCreateForm());
+  createOpen.value = true;
+}
+
+function closeCreate() {
+  if (creating.value) return;
+  createOpen.value = false;
+}
+
+async function submitCreate() {
+  if (creating.value) return;
+  creating.value = true;
+  const ok = await createVariable(createForm);
+  creating.value = false;
+  if (!ok) return;
+  createOpen.value = false;
+  refresh();
+}
 
 const compareRows = computed(() => {
   const staging = new Map();
@@ -84,53 +150,40 @@ async function copyText(text, okKey) {
 </script>
 
 <template>
-  <a-config-provider component-size="small">
     <div class="gitlab-page">
       <main class="settings-main">
           <section class="settings-panel">
             <div class="gitlab-head">
               <h2>{{ t("gitlabVariables") }}</h2>
-              <a-button class="gitlab-refresh" size="middle" :loading="loading" @click="refresh">
-                <template #icon><ReloadOutlined /></template>
-                {{ t("gitlabRefresh") }}
-              </a-button>
+              <div class="gitlab-head-actions">
+                <a-button @click="openCreate">
+                  <template #icon><PlusOutlined /></template>
+                  {{ t("gitlabCreate") }}
+                </a-button>
+                <span class="gitlab-head-split" aria-hidden="true" />
+                <a-button class="gitlab-refresh" :loading="loading" @click="refresh({ reopenSettings: true })">
+                  <template #icon><ReloadOutlined /></template>
+                  {{ t("gitlabRefresh") }}
+                </a-button>
+                <a-button @click="openSettings">
+                  <template #icon><SettingOutlined /></template>
+                  {{ t("gitlabSettings") }}
+                </a-button>
+              </div>
             </div>
             <div class="gitlab-body">
               <div v-if="loading" class="gitlab-mask">
                 <a-spin spinning size="large" :tip="t('gitlabLoading')" />
               </div>
 
-            <div v-if="!loading && needsToken" class="cfg-group">
-              <div class="cfg-group-h">
-                <div>
-                  <b>{{ tokenTitle }}</b>
-                  <span>{{ tokenSub }}</span>
-                </div>
-              </div>
-              <div class="cfg-group-b">
-                <a-alert show-icon :type="tokenAlertType" :message="tokenAlert" />
-                <div class="gitlab-token-row">
-                  <a-input-password
-                    v-model:value="tokenInput"
-                    class="gitlab-token-input"
-                    autocomplete="new-password"
-                    spellcheck="false"
-                    :placeholder="t('gitlabTokenPlaceholder')"
-                    @press-enter="saveToken"
-                  />
-                  <a-button type="primary" @click="saveToken">
-                    {{ t("gitlabTokenSave") }}
-                  </a-button>
-                </div>
-              </div>
-            </div>
+            <p v-if="!loading && needsConfig" class="gitlab-need-setup">{{ setupMessage }}</p>
 
             <div v-else-if="!loading && status === 'failed'" class="cfg-group">
               <div class="cfg-group-b">
                 <a-alert type="error" show-icon :message="messageText" />
                 <div class="gitlab-actions">
-                  <a-button type="primary" @click="refresh">{{ t("gitlabRetry") }}</a-button>
-                  <a-button @click="editToken">{{ t("gitlabTokenReset") }}</a-button>
+                  <a-button type="primary" @click="refresh({ reopenSettings: true })">{{ t("gitlabRetry") }}</a-button>
+                  <a-button @click="openSettings">{{ t("gitlabSettings") }}</a-button>
                 </div>
               </div>
             </div>
@@ -160,13 +213,26 @@ async function copyText(text, okKey) {
                             <span v-if="row.left.variableType === 'file'" class="var-tag">{{ t("gitlabTypeFile") }}</span>
                           </div>
                         </div>
-                        <a-button
-                          class="var-edit"
-                          :title="t('gitlabEdit')"
-                          :aria-label="t('gitlabEdit')"
-                        >
-                          <template #icon><EditOutlined /></template>
-                        </a-button>
+                        <div class="var-actions">
+                          <a-button
+                            class="var-edit"
+                            size="small"
+                            :title="t('gitlabEdit')"
+                            :aria-label="t('gitlabEdit')"
+                          >
+                            <template #icon><EditOutlined /></template>
+                          </a-button>
+                          <a-button
+                            class="var-edit"
+                            size="small"
+                            danger
+                            :title="t('gitlabDelete')"
+                            :aria-label="t('gitlabDelete')"
+                            @click="openDelete(row.left)"
+                          >
+                            <template #icon><DeleteOutlined /></template>
+                          </a-button>
+                        </div>
                       </div>
                       <p v-if="row.left.description" class="var-desc">{{ row.left.description }}</p>
                       <pre
@@ -197,13 +263,26 @@ async function copyText(text, okKey) {
                             <span v-if="row.right.variableType === 'file'" class="var-tag">{{ t("gitlabTypeFile") }}</span>
                           </div>
                         </div>
-                        <a-button
-                          class="var-edit"
-                          :title="t('gitlabEdit')"
-                          :aria-label="t('gitlabEdit')"
-                        >
-                          <template #icon><EditOutlined /></template>
-                        </a-button>
+                        <div class="var-actions">
+                          <a-button
+                            class="var-edit"
+                            size="small"
+                            :title="t('gitlabEdit')"
+                            :aria-label="t('gitlabEdit')"
+                          >
+                            <template #icon><EditOutlined /></template>
+                          </a-button>
+                          <a-button
+                            class="var-edit"
+                            size="small"
+                            danger
+                            :title="t('gitlabDelete')"
+                            :aria-label="t('gitlabDelete')"
+                            @click="openDelete(row.right)"
+                          >
+                            <template #icon><DeleteOutlined /></template>
+                          </a-button>
+                        </div>
                       </div>
                       <p v-if="row.right.description" class="var-desc">{{ row.right.description }}</p>
                       <pre
@@ -221,8 +300,127 @@ async function copyText(text, okKey) {
             </div>
           </section>
       </main>
+      <a-modal
+        :open="settingsOpen"
+        :title="t('gitlabSettings')"
+        :mask-closable="false"
+        :footer="null"
+        @cancel="closeSettings"
+      >
+        <div class="gitlab-settings-form">
+          <label>
+            <span>{{ t("gitlabGroupLabel") }}</span>
+            <a-input
+              v-model:value="groupUrlInput"
+              spellcheck="false"
+              :placeholder="t('gitlabGroupPlaceholder')"
+              @press-enter="saveGitlabSettings"
+            />
+          </label>
+          <label>
+            <span>{{ t("gitlabTokenLabel") }}</span>
+            <a-input-password
+              v-model:value="tokenInput"
+              autocomplete="new-password"
+              spellcheck="false"
+              :placeholder="t('gitlabTokenPlaceholder')"
+              @press-enter="saveGitlabSettings"
+            />
+          </label>
+        </div>
+        <div class="gitlab-settings-actions">
+          <a-button @click="closeSettings">{{ t("gitlabSettingsCancel") }}</a-button>
+          <a-button type="primary" @click="saveGitlabSettings">{{ t("gitlabTokenSave") }}</a-button>
+        </div>
+      </a-modal>
+      <a-modal
+        :open="!!deleteTarget"
+        :title="t('gitlabDeleteTitle')"
+        :mask-closable="false"
+        :footer="null"
+        @cancel="closeDelete"
+      >
+        <p class="gitlab-delete-hint">
+          {{ t("gitlabDeleteHint", { key: deleteTarget?.key || "", scope: deleteTarget?.environmentScope || "" }) }}
+        </p>
+        <a-input
+          v-model:value="deleteConfirmText"
+          spellcheck="false"
+          :disabled="deleting"
+          :placeholder="DELETE_WORD"
+          @keydown.enter.prevent
+        />
+        <div class="gitlab-settings-actions">
+          <a-button :disabled="deleting" @click="closeDelete">{{ t("gitlabSettingsCancel") }}</a-button>
+          <a-button danger type="primary" :disabled="!deleteReady" :loading="deleting" @click="submitDelete">
+            {{ t("gitlabDelete") }}
+          </a-button>
+        </div>
+      </a-modal>
+      <a-modal
+        :open="createOpen"
+        :title="t('gitlabCreateTitle')"
+        :mask-closable="false"
+        :footer="null"
+        @cancel="closeCreate"
+      >
+        <div class="gitlab-settings-form">
+          <label>
+            <span>{{ t("gitlabCreateScope") }}</span>
+            <a-select
+              v-model:value="createForm.environmentScope"
+              :disabled="creating"
+              :options="scopeOptions"
+            />
+          </label>
+          <label>
+            <span>{{ t("gitlabCreateKey") }}</span>
+            <a-input v-model:value="createForm.key" spellcheck="false" :disabled="creating" />
+          </label>
+          <label>
+            <span>{{ t("gitlabCreateValue") }}</span>
+            <a-textarea
+              v-model:value="createForm.value"
+              :disabled="creating"
+              :auto-size="{ minRows: 3, maxRows: 8 }"
+            />
+          </label>
+          <label>
+            <span>{{ t("gitlabCreateDescription") }}</span>
+            <a-input v-model:value="createForm.description" :disabled="creating" />
+          </label>
+          <label>
+            <span>{{ t("gitlabCreateType") }}</span>
+            <a-select
+              v-model:value="createForm.variableType"
+              :disabled="creating"
+              :options="[
+                { value: 'env_var', label: t('gitlabTypeEnv') },
+                { value: 'file', label: t('gitlabTypeFile') },
+              ]"
+            />
+          </label>
+          <div class="gitlab-create-flags">
+            <span>
+              <a-switch v-model:checked="createForm.isProtected" :disabled="creating" />
+              {{ t("gitlabColProtected") }}
+            </span>
+            <span>
+              <a-switch v-model:checked="createForm.isMasked" :disabled="creating" />
+              {{ t("gitlabColMasked") }}
+            </span>
+            <span>
+              <a-switch v-model:checked="createForm.expanded" :disabled="creating" />
+              {{ t("gitlabColExpanded") }}
+            </span>
+          </div>
+        </div>
+        <div class="gitlab-settings-actions">
+          <a-button :disabled="creating" @click="closeCreate">{{ t("gitlabSettingsCancel") }}</a-button>
+          <a-button type="primary" :loading="creating" @click="submitCreate">{{ t("gitlabCreate") }}</a-button>
+        </div>
+      </a-modal>
     </div>
-  </a-config-provider>
 </template>
 
 <style scoped>
@@ -257,16 +455,36 @@ async function copyText(text, okKey) {
   place-items: center;
   background: color-mix(in srgb, var(--bg) 62%, transparent);
 }
-.gitlab-token-row,
 .gitlab-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 10px;
 }
-.gitlab-token-input {
-  flex: 1;
-  max-width: 480px;
+.gitlab-need-setup {
+  margin: 28px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.gitlab-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gitlab-settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+.gitlab-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }
 .gitlab-head {
   display: flex;
@@ -279,8 +497,29 @@ async function copyText(text, okKey) {
   margin: 0;
   min-width: 0;
 }
-.gitlab-refresh {
+.gitlab-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: 0 0 auto;
+}
+.gitlab-head-split {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 0;
+  background: var(--line);
+}
+.gitlab-create-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  color: var(--ink-strong);
+  font-size: 13px;
+}
+.gitlab-create-flags span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .diff-wrap {
   width: 100%;
@@ -399,8 +638,20 @@ async function copyText(text, okKey) {
   font-weight: 600;
   line-height: 1;
 }
+.var-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
 .var-edit {
   flex: 0 0 auto;
+}
+.gitlab-delete-hint {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
 }
 .var-desc {
   margin: 4px 0 0;
