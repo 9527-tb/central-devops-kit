@@ -110,13 +110,95 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify updater signing key
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::Missing secret TAURI_SIGNING_PRIVATE_KEY. Add the contents of ~/.tauri/central-devops-kit.key in repo Settings → Secrets."
+            exit 1
+          fi
+
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: Central DevOps Kit v__VERSION__
-          releaseBody: "Built from master."
+          releaseBody: |
+            ## Central DevOps Kit v__VERSION__
+
+            Installers and updater artifacts are attached.
+            The app reads `latest.json` from this release.
           releaseDraft: false
           prerelease: false
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
+
+  fix-updater-json:
+    needs: [prepare, release]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Rebuild latest.json from release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="v${{ needs.prepare.outputs.version }}"
+          echo "Rebuilding latest.json on $TAG"
+          node scripts/rebuild-latest-json.mjs "$TAG"
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            body=$(curl -fsSL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/latest.json" || true)
+            if [ -z "$body" ]; then
+              echo "Release asset not ready (attempt $i), sleeping..."
+              sleep 5
+              continue
+            fi
+            if printf '%s' "$body" | grep -q 'api.github.com/repos/.*/releases/assets/'; then
+              echo "Still has API URLs (attempt $i), sleeping..."
+              sleep 5
+              continue
+            fi
+            if ! printf '%s' "$body" | grep -q '"darwin-aarch64"'; then
+              echo "Missing darwin-aarch64 (attempt $i), sleeping..."
+              sleep 5
+              continue
+            fi
+            ok=1
+            break
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::latest.json invalid on the public release (API URLs or missing darwin)"
+            exit 1
+          fi
+          echo "Verified latest.json with browser download URLs"
+
+      - name: Publish updater manifest
+        run: |
+          set -euo pipefail
+          git add updater/latest.json
+          if git diff --cached --quiet; then
+            echo "updater/latest.json unchanged"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore: update updater manifest [skip ci]"
+          git push origin HEAD:master

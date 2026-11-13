@@ -42,4 +42,12 @@ pnpm dev
 
 ## 应用内更新
 
-更新插件已接上，清单和签名公钥还没配。准备开启应用内更新时，在 `src-tauri/tauri.conf.json` 增加 `plugins.updater`（`pubkey` 与 `endpoints`），并把 `bundle.createUpdaterArtifacts` 设为 `true`。
+启动约 3 秒后自动检查；也可以在左侧栏或设置里手动检查。发现新版本后确认下载安装，完成后重启。
+
+客户端按顺序读取这些清单：
+
+- `https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/latest/download/latest.json`
+- `https://cdn.jsdelivr.net/gh/9527-tb/central-devops-kit@master/updater/latest.json`
+- `https://github.com/9527-tb/central-devops-kit/releases/latest/download/latest.json`
+
+安装包用 minisign 验签。仓库 Secret `TAURI_SIGNING_PRIVATE_KEY` 是 `~/.tauri/central-devops-kit.key` 的全文；私钥没有密码。发布成功后，工作流会按 Release 附件重建 `latest.json`，并写回 `updater/latest.json`。

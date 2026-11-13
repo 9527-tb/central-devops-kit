@@ -1,6 +1,7 @@
 /**
- * 应用内更新。清单地址和签名公钥配在 tauri.conf.json 的 plugins.updater。
- * 没有可安装的更新时提示已是最新版本，不当作检查失败。
+ * 应用内更新：检查 → 下载安装 → 重启。
+ * 清单地址和签名公钥在 tauri.conf.json 的 plugins.updater。
+ * 更新包经 minisign 验签，失败则拒绝安装。
  */
 
 import { onMounted, onBeforeUnmount, ref } from "vue";
@@ -77,13 +78,6 @@ export function useAppUpdate() {
       return true;
     } catch (error) {
       const raw = String(error || "");
-      if (isNoUpdate(raw)) {
-        updateAvailable.value = false;
-        pendingUpdate = null;
-        updateInfo.value = null;
-        if (!silent) message.success(t("updateUpToDate"));
-        return false;
-      }
       if (!silent) {
         message.error(t("updateCheckFail", { error: friendlyUpdateError(raw) }));
       } else {
@@ -95,15 +89,11 @@ export function useAppUpdate() {
     }
   }
 
-  function isNoUpdate(raw) {
-    const s = String(raw || "");
-    return /404|Not Found|Could not fetch|endpoint|no updater|plugin:updater|updater plugin|plugins\.updater/i.test(
-      s,
-    );
-  }
-
   function friendlyUpdateError(raw) {
     const s = String(raw || "");
+    if (/404|Not Found|Could not fetch/i.test(s)) {
+      return t("updateCheckNoRelease");
+    }
     if (/signature|verify|pubkey|minisign/i.test(s)) {
       return t("updateCheckBadSignature");
     }
