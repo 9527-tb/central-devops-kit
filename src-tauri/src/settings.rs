@@ -1,4 +1,4 @@
-//! 用户设置：外观、语言、GitLab Access Token、开机自启、关闭到托盘、启动检查更新。
+//! 用户设置：外观、语言、GitLab group 地址、Access Token、开机自启、关闭到托盘、启动检查更新。
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -48,6 +48,8 @@ impl Default for GeneralSettings {
 pub struct GitlabSettings {
     #[serde(default)]
     pub access_token: String,
+    #[serde(default)]
+    pub group_url: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]

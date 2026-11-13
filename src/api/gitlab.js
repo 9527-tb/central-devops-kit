@@ -4,6 +4,6 @@
 
 import { invokeSafe } from "./tauri.js";
 
-export function loadGitlabVariables(token, page = 1) {
-  return invokeSafe("gitlab_load_variables", { token, page });
+export function loadGitlabVariables(token, groupUrl, page = 1) {
+  return invokeSafe("gitlab_load_variables", { token, groupUrl, page });
 }

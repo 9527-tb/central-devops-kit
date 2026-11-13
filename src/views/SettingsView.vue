@@ -5,7 +5,6 @@ import "../styles/settings-layout.css";
 </script>
 
 <template>
-  <a-config-provider component-size="small">
     <div class="settings-page">
       <a-spin :spinning="settingsLoading" class="settings-main-spin">
         <main class="settings-main">
@@ -13,7 +12,6 @@ import "../styles/settings-layout.css";
         </main>
       </a-spin>
     </div>
-  </a-config-provider>
 </template>
 
 <style>

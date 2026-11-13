@@ -1,11 +1,11 @@
 <!--
-  GitLab 变量页。进入后先检查 Access Token，有效再拉取固定路径的 CI/CD 变量。
+  GitLab 变量页。首次打开时配置 group 地址和 Access Token，齐全后再读取变量。
   检查和读取时遮住标题以下的内容，避免加载时继续操作。
 -->
 <script setup>
 import { computed } from "vue";
 import { message } from "antdv-next";
-import { EditOutlined, ReloadOutlined } from "@antdv-next/icons";
+import { EditOutlined, ReloadOutlined, SettingOutlined } from "@antdv-next/icons";
 import { createTranslator } from "../i18n/index.js";
 import { locale } from "../stores/settings.js";
 import { useGitlabVariables } from "../features/gitlab/useGitlabVariables.js";
@@ -17,29 +17,21 @@ const {
   status,
   messageText,
   tokenInput,
+  groupUrlInput,
+  settingsOpen,
   rows,
   refresh,
-  saveToken,
-  editToken,
+  openSettings,
+  closeSettings,
+  saveGitlabSettings,
 } = useGitlabVariables();
 
 const STAGING = "connect-staging";
 const PRODUCTION = "connect-production";
 
-const needsToken = computed(
-  () => status.value === "missing" || status.value === "invalid" || status.value === "edit",
-);
-const tokenAlertType = computed(() => (status.value === "invalid" ? "error" : "warning"));
-const tokenAlert = computed(() => {
-  if (status.value === "invalid") return t("gitlabTokenInvalid");
-  if (status.value === "edit") return t("gitlabTokenReplace");
-  return t("gitlabTokenMissing");
-});
-const tokenTitle = computed(() =>
-  status.value === "missing" ? t("gitlabTokenSetTitle") : t("gitlabTokenResetTitle"),
-);
-const tokenSub = computed(() =>
-  status.value === "missing" ? t("gitlabTokenSetSub") : t("gitlabTokenResetSub"),
+const needsConfig = computed(() => status.value === "missing" || status.value === "invalid");
+const setupMessage = computed(() =>
+  status.value === "invalid" ? t("gitlabTokenInvalid") : t("gitlabTokenMissing"),
 );
 
 const compareRows = computed(() => {
@@ -84,53 +76,35 @@ async function copyText(text, okKey) {
 </script>
 
 <template>
-  <a-config-provider component-size="small">
     <div class="gitlab-page">
       <main class="settings-main">
           <section class="settings-panel">
             <div class="gitlab-head">
               <h2>{{ t("gitlabVariables") }}</h2>
-              <a-button class="gitlab-refresh" size="middle" :loading="loading" @click="refresh">
-                <template #icon><ReloadOutlined /></template>
-                {{ t("gitlabRefresh") }}
-              </a-button>
+              <div class="gitlab-head-actions">
+                <a-button class="gitlab-refresh" :loading="loading" @click="refresh({ reopenSettings: true })">
+                  <template #icon><ReloadOutlined /></template>
+                  {{ t("gitlabRefresh") }}
+                </a-button>
+                <a-button @click="openSettings">
+                  <template #icon><SettingOutlined /></template>
+                  {{ t("gitlabSettings") }}
+                </a-button>
+              </div>
             </div>
             <div class="gitlab-body">
               <div v-if="loading" class="gitlab-mask">
-                <a-spin spinning size="large" :tip="t('gitlabLoading')" />
+                <a-spin spinning :tip="t('gitlabLoading')" />
               </div>
 
-            <div v-if="!loading && needsToken" class="cfg-group">
-              <div class="cfg-group-h">
-                <div>
-                  <b>{{ tokenTitle }}</b>
-                  <span>{{ tokenSub }}</span>
-                </div>
-              </div>
-              <div class="cfg-group-b">
-                <a-alert show-icon :type="tokenAlertType" :message="tokenAlert" />
-                <div class="gitlab-token-row">
-                  <a-input-password
-                    v-model:value="tokenInput"
-                    class="gitlab-token-input"
-                    autocomplete="new-password"
-                    spellcheck="false"
-                    :placeholder="t('gitlabTokenPlaceholder')"
-                    @press-enter="saveToken"
-                  />
-                  <a-button type="primary" @click="saveToken">
-                    {{ t("gitlabTokenSave") }}
-                  </a-button>
-                </div>
-              </div>
-            </div>
+            <p v-if="!loading && needsConfig" class="gitlab-need-setup">{{ setupMessage }}</p>
 
             <div v-else-if="!loading && status === 'failed'" class="cfg-group">
               <div class="cfg-group-b">
                 <a-alert type="error" show-icon :message="messageText" />
                 <div class="gitlab-actions">
-                  <a-button type="primary" @click="refresh">{{ t("gitlabRetry") }}</a-button>
-                  <a-button @click="editToken">{{ t("gitlabTokenReset") }}</a-button>
+                  <a-button type="primary" @click="refresh({ reopenSettings: true })">{{ t("gitlabRetry") }}</a-button>
+                  <a-button @click="openSettings">{{ t("gitlabSettings") }}</a-button>
                 </div>
               </div>
             </div>
@@ -162,6 +136,7 @@ async function copyText(text, okKey) {
                         </div>
                         <a-button
                           class="var-edit"
+                          size="small"
                           :title="t('gitlabEdit')"
                           :aria-label="t('gitlabEdit')"
                         >
@@ -199,6 +174,7 @@ async function copyText(text, okKey) {
                         </div>
                         <a-button
                           class="var-edit"
+                          size="small"
                           :title="t('gitlabEdit')"
                           :aria-label="t('gitlabEdit')"
                         >
@@ -221,8 +197,40 @@ async function copyText(text, okKey) {
             </div>
           </section>
       </main>
+      <a-modal
+        :open="settingsOpen"
+        :title="t('gitlabSettings')"
+        :mask-closable="false"
+        :footer="null"
+        @cancel="closeSettings"
+      >
+        <div class="gitlab-settings-form">
+          <label>
+            <span>{{ t("gitlabGroupLabel") }}</span>
+            <a-input
+              v-model:value="groupUrlInput"
+              spellcheck="false"
+              :placeholder="t('gitlabGroupPlaceholder')"
+              @press-enter="saveGitlabSettings"
+            />
+          </label>
+          <label>
+            <span>{{ t("gitlabTokenLabel") }}</span>
+            <a-input-password
+              v-model:value="tokenInput"
+              autocomplete="new-password"
+              spellcheck="false"
+              :placeholder="t('gitlabTokenPlaceholder')"
+              @press-enter="saveGitlabSettings"
+            />
+          </label>
+        </div>
+        <div class="gitlab-settings-actions">
+          <a-button @click="closeSettings">{{ t("gitlabSettingsCancel") }}</a-button>
+          <a-button type="primary" @click="saveGitlabSettings">{{ t("gitlabTokenSave") }}</a-button>
+        </div>
+      </a-modal>
     </div>
-  </a-config-provider>
 </template>
 
 <style scoped>
@@ -257,16 +265,35 @@ async function copyText(text, okKey) {
   place-items: center;
   background: color-mix(in srgb, var(--bg) 62%, transparent);
 }
-.gitlab-token-row,
 .gitlab-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 10px;
 }
-.gitlab-token-input {
-  flex: 1;
-  max-width: 480px;
+.gitlab-need-setup {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.gitlab-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gitlab-settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+.gitlab-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }
 .gitlab-head {
   display: flex;
@@ -274,6 +301,12 @@ async function copyText(text, okKey) {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+.gitlab-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 .gitlab-head h2 {
   margin: 0;
