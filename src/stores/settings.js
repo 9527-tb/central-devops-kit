@@ -56,7 +56,7 @@ export function normalizeSettings(raw) {
 export const settings = ref(emptySettings());
 export const saving = ref(false);
 export const settingsPage = ref(false);
-export const settingsLoading = ref(false);
+export const settingsLoading = ref(true);
 
 export const locale = ref("zh-CN");
 export const colorThemeId = ref("teal");
