@@ -74,3 +74,14 @@ pub async fn gitlab_create_variable(
     )
     .await
 }
+
+#[tauri::command]
+pub async fn gitlab_update_variable(
+    token: String,
+    group_url: String,
+    key: String,
+    environment_scope: String,
+    value: String,
+) -> crate::gitlab::GitlabActionResult {
+    crate::gitlab::update_variable(token, group_url, key, environment_scope, value).await
+}

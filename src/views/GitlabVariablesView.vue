@@ -25,6 +25,7 @@ const {
   closeSettings,
   saveGitlabSettings,
   removeVariable,
+  updateVariable,
   createVariable,
   createVariables,
 } = useGitlabVariables();
@@ -53,6 +54,31 @@ function closeDelete() {
   deleteConfirmText.value = "";
 }
 
+const editTarget = ref(null);
+const editValue = ref("");
+const editing = ref(false);
+
+function openEdit(record) {
+  editTarget.value = record;
+  editValue.value = String(record?.value ?? "");
+}
+
+function closeEdit() {
+  if (editing.value) return;
+  editTarget.value = null;
+  editValue.value = "";
+}
+
+async function submitEdit() {
+  if (!editTarget.value || editing.value) return;
+  editing.value = true;
+  const ok = await updateVariable(editTarget.value, editValue.value);
+  editing.value = false;
+  if (!ok) return;
+  editTarget.value = null;
+  editValue.value = "";
+}
+
 async function submitDelete() {
   if (!deleteTarget.value || deleting.value) return;
   if (!deleteReady.value) {
@@ -61,11 +87,10 @@ async function submitDelete() {
   }
   const record = deleteTarget.value;
   deleting.value = true;
-  const ok = await removeVariable(record);
+  await removeVariable(record);
   deleteTarget.value = null;
   deleteConfirmText.value = "";
   deleting.value = false;
-  if (ok) refresh();
 }
 
 const CREATE_ENVS = [
@@ -152,7 +177,6 @@ async function confirmCreate() {
   if (!ok) return;
   createOpen.value = false;
   createStep.value = "edit";
-  refresh();
 }
 
 const compareRows = computed(() => {
@@ -266,6 +290,7 @@ async function copyText(text, okKey) {
                             size="small"
                             :title="t('gitlabEdit')"
                             :aria-label="t('gitlabEdit')"
+                            @click="openEdit(row.left)"
                           >
                             <template #icon><EditOutlined /></template>
                           </a-button>
@@ -316,6 +341,7 @@ async function copyText(text, okKey) {
                             size="small"
                             :title="t('gitlabEdit')"
                             :aria-label="t('gitlabEdit')"
+                            @click="openEdit(row.right)"
                           >
                             <template #icon><EditOutlined /></template>
                           </a-button>
@@ -402,6 +428,36 @@ async function copyText(text, okKey) {
           <a-button danger type="primary" :disabled="!deleteReady" :loading="deleting" @click="submitDelete">
             {{ t("gitlabDelete") }}
           </a-button>
+        </div>
+      </a-modal>
+      <a-modal
+        :open="!!editTarget"
+        :width="560"
+        :title="t('gitlabEditTitle')"
+        :mask-closable="false"
+        :footer="null"
+        @cancel="closeEdit"
+      >
+        <div class="gitlab-edit-meta">
+          <div>
+            <span>{{ t("gitlabCreateKey") }}</span>
+            <b>{{ editTarget?.key }}</b>
+          </div>
+          <div>
+            <span>{{ t("gitlabCreateScope") }}</span>
+            <b>{{ editTarget?.environmentScope }}</b>
+          </div>
+        </div>
+        <p v-if="editTarget && (editTarget.hidden || editTarget.isMasked) && !hasValue(editTarget)" class="gitlab-edit-hint">
+          {{ t("gitlabEditHidden") }}
+        </p>
+        <label class="gitlab-edit-value">
+          <span>{{ t("gitlabCreateValue") }}</span>
+          <a-textarea v-model:value="editValue" :disabled="editing" :auto-size="{ minRows: 4, maxRows: 10 }" />
+        </label>
+        <div class="gitlab-settings-actions">
+          <a-button :disabled="editing" @click="closeEdit">{{ t("gitlabSettingsCancel") }}</a-button>
+          <a-button type="primary" :loading="editing" @click="submitEdit">{{ t("gitlabEditSave") }}</a-button>
         </div>
       </a-modal>
       <a-modal
@@ -553,6 +609,42 @@ async function copyText(text, okKey) {
   color: var(--ink-strong);
   font-size: 12px;
   font-weight: 650;
+}
+.gitlab-edit-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.gitlab-edit-meta div {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+.gitlab-edit-meta span,
+.gitlab-edit-value span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.gitlab-edit-meta b {
+  display: block;
+  color: var(--ink-strong);
+  font-size: 13px;
+  word-break: break-all;
+}
+.gitlab-edit-hint {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.gitlab-edit-value {
+  display: flex;
+  flex-direction: column;
 }
 .gitlab-settings-actions {
   display: flex;

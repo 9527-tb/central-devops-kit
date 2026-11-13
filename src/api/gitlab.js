@@ -15,3 +15,7 @@ export function deleteGitlabVariable(token, groupUrl, key, environmentScope) {
 export function createGitlabVariable(payload) {
   return invokeSafe("gitlab_create_variable", payload);
 }
+
+export function updateGitlabVariable(token, groupUrl, key, environmentScope, value) {
+  return invokeSafe("gitlab_update_variable", { token, groupUrl, key, environmentScope, value });
+}

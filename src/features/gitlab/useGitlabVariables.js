@@ -5,7 +5,7 @@
 import { onBeforeUnmount, ref, watch } from "vue";
 import { message } from "antdv-next";
 import { isTauri } from "../../api/tauri.js";
-import { loadGitlabVariables, deleteGitlabVariable, createGitlabVariable } from "../../api/gitlab.js";
+import { loadGitlabVariables, deleteGitlabVariable, createGitlabVariable, updateGitlabVariable } from "../../api/gitlab.js";
 import { createTranslator } from "../../i18n/index.js";
 import {
   locale,
@@ -41,6 +41,54 @@ export function useGitlabVariables() {
       return t("gitlabNetwork", { error: result.message || "—" });
     }
     return t("gitlabLoadFail", { error: result.message || result.code || "—" });
+  }
+
+  function sameVariable(row, key, scope) {
+    return String(row?.key || "") === key && String(row?.environmentScope || "").trim() === scope;
+  }
+
+  function dropInFlightLoad() {
+    ticket += 1;
+    loading.value = false;
+    if (status.value === "loading") status.value = "ready";
+  }
+
+  function forgetVariable(key, scope) {
+    const next = rows.value.filter((row) => !sameVariable(row, key, scope));
+    const removed = rows.value.length - next.length;
+    if (!removed) return;
+    dropInFlightLoad();
+    rows.value = next;
+    total.value = Math.max(0, Number(total.value) - removed);
+  }
+
+  function rememberVariable(input) {
+    const key = String(input?.key || "").trim();
+    const environmentScope = String(input?.environmentScope || "").trim() || "*";
+    if (!key) return;
+    const row = {
+      key,
+      value: String(input?.value ?? ""),
+      hidden: false,
+      variableType: input?.variableType === "file" ? "file" : "env_var",
+      isProtected: !!input?.isProtected,
+      isMasked: !!input?.isMasked,
+      expanded: !!input?.expanded,
+      environmentScope,
+      description: String(input?.description || "").trim(),
+    };
+    dropInFlightLoad();
+    status.value = "ready";
+    const index = rows.value.findIndex((item) => sameVariable(item, key, environmentScope));
+    if (index >= 0) {
+      const next = rows.value.slice();
+      next[index] = row;
+      rows.value = next;
+      return;
+    }
+    rows.value = [...rows.value, row];
+    total.value = Number(total.value) + 1;
+    status.value = "ready";
   }
 
   function savedGitlab() {
@@ -229,6 +277,47 @@ export function useGitlabVariables() {
       return false;
     }
     message.success(t("gitlabDeleted", { key }));
+    forgetVariable(key, environmentScope);
+    return true;
+  }
+
+  async function updateVariable(record, value) {
+    const key = String(record?.key || "").trim();
+    const environmentScope = String(record?.environmentScope || "").trim();
+    const { token, groupUrl } = savedGitlab();
+    if (!token || !groupUrl || !key || !environmentScope) {
+      message.warning(t("gitlabSettingsRequired"));
+      return false;
+    }
+    if (!isTauri) {
+      message.info(t("gitlabNeedDesktop"));
+      return false;
+    }
+    try {
+      const result = await updateGitlabVariable(token, groupUrl, key, environmentScope, String(value ?? ""));
+      if (!result || result.status !== "ok") {
+        const detail = String(result?.message || "").trim();
+        const text =
+          result?.code === "not_found"
+            ? t("gitlabDeleteMissing", { key })
+            : detail
+              ? t("gitlabEditFail", { error: detail })
+              : failText(result);
+        message.error(text);
+        return false;
+      }
+    } catch (error) {
+      message.error(t("gitlabEditFail", { error: String(error) }));
+      return false;
+    }
+    rememberVariable({
+      ...record,
+      key,
+      environmentScope,
+      value: String(value ?? ""),
+      hidden: false,
+    });
+    message.success(t("gitlabEdited", { key }));
     return true;
   }
 
@@ -275,6 +364,7 @@ export function useGitlabVariables() {
       return false;
     }
     if (!options.quiet) message.success(t("gitlabCreated", { key }));
+    rememberVariable({ ...input, key, environmentScope });
     return true;
   }
 
@@ -322,6 +412,7 @@ export function useGitlabVariables() {
     closeSettings,
     saveGitlabSettings,
     removeVariable,
+    updateVariable,
     createVariable,
     createVariables,
   };

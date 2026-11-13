@@ -327,6 +327,80 @@ fn variable_key_ok(key: &str) -> bool {
     !key.is_empty() && key.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }
 
+pub async fn update_variable(
+    token: String,
+    group_url: String,
+    key: String,
+    environment_scope: String,
+    value: String,
+) -> GitlabActionResult {
+    let token = token.trim();
+    let group_url = group_url.trim();
+    let key = key.trim();
+    let scope = environment_scope.trim();
+    if token.is_empty() || group_url.is_empty() || key.is_empty() || scope.is_empty() {
+        return GitlabActionResult::failed("missing", "");
+    }
+    let (origin, path) = match parse_group_address(group_url) {
+        Ok(value) => value,
+        Err(()) => return GitlabActionResult::failed("bad_address", ""),
+    };
+    let client = match http_client() {
+        Ok(client) => client,
+        Err(message) => return GitlabActionResult::failed("network", message),
+    };
+    match update_with(&client, token, &origin, &path, key, scope, &value).await {
+        Ok(()) => GitlabActionResult::ok(),
+        Err(ApiError::Invalid) => GitlabActionResult::failed("invalid", ""),
+        Err(ApiError::NotFound) => GitlabActionResult::failed("not_found", ""),
+        Err(ApiError::Forbidden) => GitlabActionResult::failed("forbidden", ""),
+        Err(ApiError::BadResponse) => GitlabActionResult::failed("bad_response", ""),
+        Err(ApiError::Network(message)) => GitlabActionResult::failed("network", message),
+        Err(ApiError::Status(message)) => GitlabActionResult::failed("error", message),
+    }
+}
+
+async fn update_with(
+    client: &reqwest::Client,
+    token: &str,
+    origin: &str,
+    path: &str,
+    key: &str,
+    scope: &str,
+    value: &str,
+) -> Result<(), ApiError> {
+    let resource = lookup_group(client, token, origin, path).await?;
+    let url = format!(
+        "{origin}/api/v4/groups/{}/variables/{}",
+        resource.id,
+        encode_component(key)
+    );
+    let body = UpdateValue { value };
+    let http = put_json(
+        client,
+        token,
+        &url,
+        &[("filter[environment_scope]", scope)],
+        &body,
+    )
+    .await?;
+    if http.status == 401 {
+        return Err(ApiError::Invalid);
+    }
+    if http.status == 403 {
+        return Err(ApiError::Forbidden);
+    }
+    if http.status == 404 {
+        return Err(ApiError::NotFound);
+    }
+    ensure_ok(&http)
+}
+
+#[derive(Serialize)]
+struct UpdateValue<'a> {
+    value: &'a str,
+}
+
 #[derive(Serialize)]
 struct NewVariable<'a> {
     key: &'a str,
@@ -572,6 +646,36 @@ async fn post_json(
         .header("PRIVATE-TOKEN", token)
         .header("Accept", "application/json")
         .header("Content-Type", "application/json")
+        .body(payload)
+        .send()
+        .await
+        .map_err(|err| ApiError::Network(err.to_string()))?;
+    let status = response.status().as_u16();
+    let body = response
+        .text()
+        .await
+        .map_err(|err| ApiError::Network(err.to_string()))?;
+    Ok(HttpText {
+        status,
+        next_page: None,
+        body,
+    })
+}
+
+async fn put_json(
+    client: &reqwest::Client,
+    token: &str,
+    url: &str,
+    query: &[(&str, &str)],
+    body: &impl Serialize,
+) -> Result<HttpText, ApiError> {
+    let payload = serde_json::to_string(body).map_err(|_| ApiError::BadResponse)?;
+    let response = client
+        .put(url)
+        .header("PRIVATE-TOKEN", token)
+        .header("Accept", "application/json")
+        .header("Content-Type", "application/json")
+        .query(query)
         .body(payload)
         .send()
         .await
