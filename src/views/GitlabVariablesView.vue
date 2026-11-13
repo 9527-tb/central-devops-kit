@@ -26,6 +26,7 @@ const {
   saveGitlabSettings,
   removeVariable,
   createVariable,
+  createVariables,
 } = useGitlabVariables();
 
 const STAGING = "connect-staging";
@@ -67,17 +68,20 @@ async function submitDelete() {
   if (ok) refresh();
 }
 
+const CREATE_ENVS = [
+  { id: "staging", labelKey: "gitlabEnvStaging", scope: STAGING, indo: false },
+  { id: "production", labelKey: "gitlabEnvProduction", scope: PRODUCTION, indo: false },
+  { id: "indo-staging", labelKey: "gitlabEnvIndoStaging", scope: STAGING, indo: true },
+  { id: "indo-production", labelKey: "gitlabEnvIndoProduction", scope: PRODUCTION, indo: true },
+];
 const createOpen = ref(false);
 const creating = ref(false);
+const createStep = ref("edit");
 const createForm = reactive(emptyCreateForm());
-const scopeOptions = [
-  { value: STAGING, label: STAGING },
-  { value: PRODUCTION, label: PRODUCTION },
-];
 
 function emptyCreateForm() {
   return {
-    environmentScope: STAGING,
+    scopes: [],
     key: "",
     value: "",
     description: "",
@@ -88,23 +92,66 @@ function emptyCreateForm() {
   };
 }
 
+function plannedKey(base, indo) {
+  const key = String(base || "").trim();
+  if (!indo) return key;
+  return key.endsWith("_INDO") ? key : `${key}_INDO`;
+}
+
+const createPlan = computed(() =>
+  CREATE_ENVS.filter((env) => createForm.scopes.includes(env.id)).map((env) => ({
+    id: env.id,
+    label: t(env.labelKey),
+    scope: env.scope,
+    key: plannedKey(createForm.key, env.indo),
+    value: String(createForm.value ?? ""),
+  })),
+);
+
 function openCreate() {
   Object.assign(createForm, emptyCreateForm());
+  createForm.scopes = [];
+  createStep.value = "edit";
   createOpen.value = true;
 }
 
 function closeCreate() {
   if (creating.value) return;
   createOpen.value = false;
+  createStep.value = "edit";
 }
 
-async function submitCreate() {
-  if (creating.value) return;
+function reviewCreate() {
+  const key = createForm.key.trim();
+  if (!/^[A-Za-z0-9_]+$/.test(key)) {
+    message.warning(t("gitlabCreateKeyInvalid"));
+    return;
+  }
+  if (!createPlan.value.length) {
+    message.warning(t("gitlabCreateNeedScope"));
+    return;
+  }
+  createStep.value = "confirm";
+}
+
+async function confirmCreate() {
+  if (creating.value || !createPlan.value.length) return;
   creating.value = true;
-  const ok = await createVariable(createForm);
+  const items = createPlan.value.map((item) => ({
+    key: item.key,
+    environmentScope: item.scope,
+    value: createForm.value,
+    description: createForm.description,
+    variableType: createForm.variableType,
+    isProtected: createForm.isProtected,
+    isMasked: createForm.isMasked,
+    expanded: createForm.expanded,
+  }));
+  const ok = await createVariables(items);
   creating.value = false;
   if (!ok) return;
   createOpen.value = false;
+  createStep.value = "edit";
   refresh();
 }
 
@@ -359,65 +406,92 @@ async function copyText(text, okKey) {
       </a-modal>
       <a-modal
         :open="createOpen"
-        :title="t('gitlabCreateTitle')"
+        :width="640"
+        :title="createStep === 'confirm' ? t('gitlabCreateConfirmTitle') : t('gitlabCreateTitle')"
         :mask-closable="false"
         :footer="null"
         @cancel="closeCreate"
       >
-        <div class="gitlab-settings-form">
-          <label>
+        <div v-if="createStep === 'edit'" class="gitlab-create-form">
+          <div class="gitlab-create-field">
             <span>{{ t("gitlabCreateScope") }}</span>
-            <a-select
-              v-model:value="createForm.environmentScope"
+            <a-checkbox-group
+              v-model:value="createForm.scopes"
+              class="gitlab-create-scopes"
               :disabled="creating"
-              :options="scopeOptions"
-            />
-          </label>
-          <label>
-            <span>{{ t("gitlabCreateKey") }}</span>
-            <a-input v-model:value="createForm.key" spellcheck="false" :disabled="creating" />
-          </label>
+            >
+              <a-checkbox v-for="env in CREATE_ENVS" :key="env.id" :value="env.id">
+                <span class="gitlab-create-scope-name">{{ t(env.labelKey) }}</span>
+                <span v-if="env.indo" class="gitlab-create-scope-hint">{{ t("gitlabEnvIndoHint") }}</span>
+              </a-checkbox>
+            </a-checkbox-group>
+          </div>
+          <div class="gitlab-create-split">
+            <label>
+              <span>{{ t("gitlabCreateKey") }}</span>
+              <a-input v-model:value="createForm.key" spellcheck="false" :disabled="creating" />
+            </label>
+            <label>
+              <span>{{ t("gitlabCreateType") }}</span>
+              <a-select
+                v-model:value="createForm.variableType"
+                :disabled="creating"
+                :options="[
+                  { value: 'env_var', label: t('gitlabTypeEnv') },
+                  { value: 'file', label: t('gitlabTypeFile') },
+                ]"
+              />
+            </label>
+          </div>
           <label>
             <span>{{ t("gitlabCreateValue") }}</span>
             <a-textarea
               v-model:value="createForm.value"
               :disabled="creating"
-              :auto-size="{ minRows: 3, maxRows: 8 }"
+              :auto-size="{ minRows: 4, maxRows: 8 }"
             />
           </label>
           <label>
             <span>{{ t("gitlabCreateDescription") }}</span>
             <a-input v-model:value="createForm.description" :disabled="creating" />
           </label>
-          <label>
-            <span>{{ t("gitlabCreateType") }}</span>
-            <a-select
-              v-model:value="createForm.variableType"
-              :disabled="creating"
-              :options="[
-                { value: 'env_var', label: t('gitlabTypeEnv') },
-                { value: 'file', label: t('gitlabTypeFile') },
-              ]"
-            />
-          </label>
           <div class="gitlab-create-flags">
-            <span>
+            <label>
+              <span>{{ t("gitlabColProtected") }}</span>
               <a-switch v-model:checked="createForm.isProtected" :disabled="creating" />
-              {{ t("gitlabColProtected") }}
-            </span>
-            <span>
+            </label>
+            <label>
+              <span>{{ t("gitlabColMasked") }}</span>
               <a-switch v-model:checked="createForm.isMasked" :disabled="creating" />
-              {{ t("gitlabColMasked") }}
-            </span>
-            <span>
+            </label>
+            <label>
+              <span>{{ t("gitlabColExpanded") }}</span>
               <a-switch v-model:checked="createForm.expanded" :disabled="creating" />
-              {{ t("gitlabColExpanded") }}
-            </span>
+            </label>
+          </div>
+        </div>
+        <div v-else class="gitlab-create-plan">
+          <p>{{ t("gitlabCreatePlanHint", { count: createPlan.length }) }}</p>
+          <div v-for="item in createPlan" :key="item.id" class="gitlab-create-plan-item">
+            <div class="gitlab-create-plan-top">
+              <b>{{ item.label }}</b>
+              <code>{{ item.key }}</code>
+            </div>
+            <div class="gitlab-create-plan-scope">{{ item.scope }}</div>
+            <pre>{{ item.value || "—" }}</pre>
           </div>
         </div>
         <div class="gitlab-settings-actions">
-          <a-button :disabled="creating" @click="closeCreate">{{ t("gitlabSettingsCancel") }}</a-button>
-          <a-button type="primary" :loading="creating" @click="submitCreate">{{ t("gitlabCreate") }}</a-button>
+          <a-button v-if="createStep === 'confirm'" :disabled="creating" @click="createStep = 'edit'">
+            {{ t("gitlabCreateBack") }}
+          </a-button>
+          <a-button v-else :disabled="creating" @click="closeCreate">{{ t("gitlabSettingsCancel") }}</a-button>
+          <a-button v-if="createStep === 'edit'" type="primary" @click="reviewCreate">
+            {{ t("gitlabCreateReview") }}
+          </a-button>
+          <a-button v-else type="primary" :loading="creating" @click="confirmCreate">
+            {{ t("gitlabCreateConfirm") }}
+          </a-button>
         </div>
       </a-modal>
     </div>
@@ -509,17 +583,107 @@ async function copyText(text, okKey) {
   margin: 6px 0;
   background: var(--line);
 }
-.gitlab-create-flags {
+.gitlab-create-form {
   display: flex;
-  flex-wrap: wrap;
-  gap: 14px 18px;
-  color: var(--ink-strong);
-  font-size: 13px;
+  flex-direction: column;
+  gap: 14px;
 }
-.gitlab-create-flags span {
-  display: inline-flex;
-  align-items: center;
+.gitlab-create-form > label,
+.gitlab-create-field,
+.gitlab-create-split label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ink-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+.gitlab-create-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(160px, 0.8fr);
+  gap: 12px;
+}
+.gitlab-create-split :deep(.ant-select) {
+  width: 100%;
+}
+.gitlab-create-scopes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
+  width: 100%;
+}
+.gitlab-create-scopes :deep(.ant-checkbox-wrapper) {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  align-items: flex-start;
+}
+.gitlab-create-scopes :deep(.ant-checkbox-wrapper-checked) {
+  border-color: var(--teal-mid);
+  background: var(--surface-selected);
+}
+.gitlab-create-scope-name,
+.gitlab-create-scope-hint {
+  display: block;
+}
+.gitlab-create-scope-hint {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.gitlab-create-flags {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.gitlab-create-flags label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.gitlab-create-plan p {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+}
+.gitlab-create-plan-item {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.gitlab-create-plan-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.gitlab-create-plan-top code {
+  color: var(--ink-strong);
+  font-weight: 650;
+}
+.gitlab-create-plan-scope {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.gitlab-create-plan-item pre {
+  margin: 8px 0 0;
+  max-height: 72px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--ink);
+  font: 12px/1.45 "IBM Plex Sans", ui-monospace, SFMono-Regular, monospace;
 }
 .diff-wrap {
   width: 100%;

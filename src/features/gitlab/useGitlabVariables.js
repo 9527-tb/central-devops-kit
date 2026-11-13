@@ -232,7 +232,7 @@ export function useGitlabVariables() {
     return true;
   }
 
-  async function createVariable(input) {
+  async function createVariable(input, options = {}) {
     const key = String(input?.key || "").trim();
     const environmentScope = String(input?.environmentScope || "").trim();
     const { token, groupUrl } = savedGitlab();
@@ -274,7 +274,21 @@ export function useGitlabVariables() {
       message.error(t("gitlabCreateFail", { error: String(error) }));
       return false;
     }
-    message.success(t("gitlabCreated", { key }));
+    if (!options.quiet) message.success(t("gitlabCreated", { key }));
+    return true;
+  }
+
+  async function createVariables(items) {
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length) {
+      message.warning(t("gitlabCreateNeedScope"));
+      return false;
+    }
+    for (const item of list) {
+      const ok = await createVariable(item, { quiet: true });
+      if (!ok) return false;
+    }
+    message.success(t("gitlabCreatedMany", { count: list.length }));
     return true;
   }
 
@@ -309,5 +323,6 @@ export function useGitlabVariables() {
     saveGitlabSettings,
     removeVariable,
     createVariable,
+    createVariables,
   };
 }
