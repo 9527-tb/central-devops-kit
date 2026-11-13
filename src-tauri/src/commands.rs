@@ -31,6 +31,7 @@ pub fn exit_app(app: AppHandle) {
 #[tauri::command]
 pub async fn gitlab_load_variables(
     token: String,
+    group_url: String,
     page: Option<u32>,
 ) -> crate::gitlab::GitlabLoadResult {
     crate::gitlab::load_variables(token, group_url, page.unwrap_or(1)).await

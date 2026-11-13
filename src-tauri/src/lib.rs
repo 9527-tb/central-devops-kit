@@ -60,9 +60,6 @@ pub fn run() {
             commands::initialize_runtime_settings,
             commands::exit_app,
             commands::gitlab_load_variables,
-            commands::gitlab_delete_variable,
-            commands::gitlab_create_variable,
-            commands::gitlab_update_variable,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
