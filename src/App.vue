@@ -10,6 +10,7 @@ import UpdateDialog from "./features/app/UpdateDialog.vue";
 import SettingsView from "./views/SettingsView.vue";
 import HomeView from "./views/HomeView.vue";
 import GitlabVariablesView from "./views/GitlabVariablesView.vue";
+import PortsView from "./views/PortsView.vue";
 import {createTranslator} from "./i18n/index.js";
 
 const t = createTranslator(locale);
@@ -74,6 +75,9 @@ onBeforeUnmount(() => {
 					</div>
 					<div v-if="mode === 'gitlab'" class="app-view">
 						<GitlabVariablesView/>
+					</div>
+					<div v-if="mode === 'ports'" class="app-view">
+						<PortsView/>
 					</div>
 					<div v-if="mode === 'settings'" class="app-view">
 						<SettingsView/>

@@ -24,7 +24,7 @@ pnpm dev
 - macOS / Linux：`~/.central-devops-kit/settings.json`
 - Windows：`%APPDATA%\central-devops-kit\settings.json`
 
-左侧图标轨底部是设置：主题、语言、开机自启、关闭到托盘。检查更新在左侧栏最下方。新功能的图标加在轨的上方。窗口使用系统标题栏。
+左侧图标轨底部是设置：主题、语言、开机自启、关闭到托盘。检查更新在左侧栏最下方。新功能的图标加在轨的上方。端口检测在 GitLab 变量旁边：输入端口号查询占用进程，确认后可以结束该进程。窗口使用系统标题栏。
 
 ## 加功能
 

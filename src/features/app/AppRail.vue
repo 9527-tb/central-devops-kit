@@ -4,8 +4,8 @@
 -->
 <script setup>
 import { computed, inject } from "vue";
-import { CloudDownloadOutlined, GitlabOutlined, SettingOutlined } from "@antdv-next/icons";
-import { appMode, goGitlab, goHome, goSettings } from "../../stores/appNav.js";
+import { ApiOutlined, CloudDownloadOutlined, GitlabOutlined, SettingOutlined } from "@antdv-next/icons";
+import { appMode, goGitlab, goHome, goPorts, goSettings } from "../../stores/appNav.js";
 
 defineProps({
   t: { type: Function, required: true },
@@ -27,6 +27,12 @@ const items = computed(() => [
     title: "gitlabVariables",
     icon: GitlabOutlined,
     onClick: () => (mode.value === "gitlab" ? goHome() : goGitlab()),
+  },
+  {
+    id: "ports",
+    title: "portManagerTitle",
+    icon: ApiOutlined,
+    onClick: () => (mode.value === "ports" ? goHome() : goPorts()),
   },
   {
     id: "settings",

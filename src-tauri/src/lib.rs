@@ -7,6 +7,7 @@
 mod commands;
 mod gitlab;
 mod platform;
+mod ports;
 mod settings;
 mod tray;
 
@@ -60,6 +61,8 @@ pub fn run() {
             commands::initialize_runtime_settings,
             commands::exit_app,
             commands::gitlab_load_variables,
+            commands::ports_lookup,
+            commands::ports_kill,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

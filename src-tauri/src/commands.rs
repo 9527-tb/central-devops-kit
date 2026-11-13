@@ -36,3 +36,13 @@ pub async fn gitlab_load_variables(
 ) -> crate::gitlab::GitlabLoadResult {
     crate::gitlab::load_variables(token, group_url, page.unwrap_or(1)).await
 }
+
+#[tauri::command]
+pub fn ports_lookup(query: String, fuzzy: bool) -> Result<Vec<crate::ports::PortOccupant>, String> {
+    crate::ports::lookup_port(&query, fuzzy)
+}
+
+#[tauri::command]
+pub fn ports_kill(pid: u32) -> Result<(), String> {
+    crate::ports::kill_process(pid)
+}
