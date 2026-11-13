@@ -34,6 +34,12 @@ pnpm dev
 - 左侧入口加在 `src/features/app/AppRail.vue` 的 `items`（不要设 `bottom`），并在 `src/stores/appNav.js` 补跳转
 - Rust 业务放 `src-tauri/src/` 的独立模块，`commands.rs` 只做 IPC 转发
 
+## 发版
+
+版本从 **0.0.1** 开始。以 `src-tauri/tauri.conf.json` 的 `version` 为准，并与 `package.json`、`src-tauri/Cargo.toml` 保持一致。
+
+推送标签 `v0.0.1`（之后用 `v*`），或在 GitHub Actions 里手动运行 Release。工作流会构建 macOS（Apple 芯片和 Intel）、Windows、Linux 安装包，并发布到同名 GitHub Release。
+
 ## 应用内更新
 
-更新插件已接上，清单和签名公钥还没配。准备发版时在 `src-tauri/tauri.conf.json` 增加 `plugins.updater`（`pubkey` 与 `endpoints`），并把 `bundle.createUpdaterArtifacts` 设为 `true`。
+更新插件已接上，清单和签名公钥还没配。准备开启应用内更新时，在 `src-tauri/tauri.conf.json` 增加 `plugins.updater`（`pubkey` 与 `endpoints`），并把 `bundle.createUpdaterArtifacts` 设为 `true`。
