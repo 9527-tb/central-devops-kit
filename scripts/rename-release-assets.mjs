@@ -58,8 +58,8 @@ function renameAsset(from, to, label) {
 }
 
 for (const item of releaseAssetPlan(version)) {
-  renameAsset(item.from, item.to, item.label);
-  renameAsset(`${item.from}.sig`, `${item.to}.sig`, `${item.label} 签名`);
+  renameAsset(item.from, item.to, item.to);
+  renameAsset(`${item.from}.sig`, `${item.to}.sig`, `${item.to}.sig`);
 }
 
 ghJson(

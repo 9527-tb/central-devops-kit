@@ -1,7 +1,7 @@
 {
   "version": "0.0.9",
-  "notes": "## Central DevOps Kit v0.0.9\n\n安装包文件名带有系统，下载后可以直接分辨。\n\n- macOS Apple Silicon 安装包：`macOS_AppleSilicon.dmg`\n- macOS Intel 安装包：`macOS_Intel.dmg`\n- macOS 更新包：`macOS_*.app.tar.gz`（应用内更新使用）\n- Windows 安装程序：`Windows_x64_setup.exe`\n- Windows 安装包：`Windows_x64.msi`\n- Linux Debian/Ubuntu 安装包：`Linux_x64.deb`\n- Linux RPM 安装包：`Linux_x64.rpm`\n- Linux AppImage：`Linux_x64.AppImage`\n\n应用内更新读取本 Release 的 `latest.json`。\n\n<!-- bust 1794565263261 -->\n",
-  "pub_date": "2026-11-13T10:21:03.262Z",
+  "notes": "## Central DevOps Kit v0.0.9\n\nAsset names include the operating system.\n\n- macOS Apple Silicon installer: `macOS_AppleSilicon.dmg`\n- macOS Intel installer: `macOS_Intel.dmg`\n- macOS updater packages: `macOS_*.app.tar.gz`\n- Windows installer: `Windows_x64_setup.exe`\n- Windows MSI installer: `Windows_x64.msi`\n- Linux Debian/Ubuntu package: `Linux_x64.deb`\n- Linux RPM package: `Linux_x64.rpm`\n- Linux AppImage: `Linux_x64.AppImage`\n\nThe app updater reads `latest.json` from this release.\n\n<!-- bust 1794566260670 -->\n",
+  "pub_date": "2026-11-13T10:37:40.670Z",
   "platforms": {
     "darwin-aarch64": {
       "url": "https://ghfast.top/https://github.com/9527-tb/central-devops-kit/releases/download/v0.0.9/Central-DevOps-Kit_0.0.9_macOS_AppleSilicon.app.tar.gz",

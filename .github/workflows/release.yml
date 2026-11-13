@@ -131,8 +131,8 @@ jobs:
           releaseBody: |
             ## Central DevOps Kit v__VERSION__
 
-            安装包文件名带有系统：macOS、Windows、Linux。
-            应用内更新读取本 Release 的 latest.json。
+            Asset names include the operating system: macOS, Windows, and Linux.
+            The app updater reads latest.json from this release.
           releaseDraft: false
           prerelease: false
           uploadUpdaterJson: true
