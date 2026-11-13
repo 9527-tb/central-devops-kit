@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
+import { releaseAssetPlan } from "./release-assets.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -25,7 +26,6 @@ if (!tag) {
 
 const useDownloadMirror = process.env.CDK_UPDATE_DOWNLOAD_MIRROR !== "0";
 const DOWNLOAD_MIRROR_PREFIX = "https://ghfast.top/";
-const BUNDLE_PREFIX = "Central.DevOps.Kit";
 
 const repo =
   process.env.GITHUB_REPOSITORY ||
@@ -77,17 +77,11 @@ const version = tag.replace(/^v/, "");
 /** @type {Record<string, {url:string, signature:string}>} */
 const platforms = {};
 
-const mapping = [
-  [`${BUNDLE_PREFIX}_${version}_aarch64.app.tar.gz`, ["darwin-aarch64", "darwin-aarch64-app"]],
-  [`${BUNDLE_PREFIX}_${version}_x64.app.tar.gz`, ["darwin-x86_64", "darwin-x86_64-app"]],
-  [`${BUNDLE_PREFIX}_${version}_x64-setup.exe`, ["windows-x86_64", "windows-x86_64-nsis"]],
-  [`${BUNDLE_PREFIX}_${version}_x64_en-US.msi`, ["windows-x86_64-msi"]],
-  [`${BUNDLE_PREFIX}_${version}_amd64.AppImage`, ["linux-x86_64", "linux-x86_64-appimage"]],
-  [`${BUNDLE_PREFIX}_${version}_amd64.deb`, ["linux-x86_64-deb"]],
-  [`${BUNDLE_PREFIX}-${version}-1.x86_64.rpm`, ["linux-x86_64-rpm"]],
-];
+const mapping = releaseAssetPlan(version).filter((item) => item.platforms);
 
-for (const [file, keys] of mapping) {
+for (const item of mapping) {
+  const file = byName.has(item.to) ? item.to : item.from;
+  const keys = item.platforms;
   const entry = platformEntries(file, byName);
   if (!entry) {
     console.warn(`[rebuild-latest-json] skip missing ${file}`);

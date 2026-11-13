@@ -38,7 +38,7 @@ pnpm dev
 
 版本从 **0.0.1** 开始。`package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 保持同一版本号。
 
-代码合并到 `master` 后，GitHub Actions 会发布一个新版本。没有历史标签时发布配置里的版本；提交里已经把版本调得更高时，按那个版本发布；否则在最新标签上把补丁号加一。然后构建 macOS（Apple 芯片和 Intel）、Windows、Linux 安装包，并发布 GitHub Release。
+代码合并到 `master` 后，GitHub Actions 会发布一个新版本。没有历史标签时发布配置里的版本；提交里已经把版本调得更高时，按那个版本发布；否则在最新标签上把补丁号加一。然后构建 macOS（Apple 芯片和 Intel）、Windows、Linux 安装包，并发布 GitHub Release。附件文件名带有系统，例如 `Windows_x64_setup.exe`、`Linux_x64.deb`、`macOS_AppleSilicon.dmg`。
 
 ## 应用内更新
 

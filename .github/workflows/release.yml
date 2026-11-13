@@ -131,8 +131,8 @@ jobs:
           releaseBody: |
             ## Central DevOps Kit v__VERSION__
 
-            Installers and updater artifacts are attached.
-            The app reads `latest.json` from this release.
+            安装包文件名带有系统：macOS、Windows、Linux。
+            应用内更新读取本 Release 的 latest.json。
           releaseDraft: false
           prerelease: false
           uploadUpdaterJson: true
@@ -154,6 +154,11 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+
+      - name: Rename release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/rename-release-assets.mjs "v${{ needs.prepare.outputs.version }}"
 
       - name: Rebuild latest.json from release assets
         env:
