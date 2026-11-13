@@ -5,7 +5,7 @@
 <script setup>
 import { computed, inject } from "vue";
 import { ApiOutlined, CloudDownloadOutlined, GitlabOutlined, SettingOutlined } from "@antdv-next/icons";
-import { appMode, goGitlab, goHome, goPorts, goSettings } from "../../stores/appNav.js";
+import { appMode, goGitlab, goPorts, goSettings } from "../../stores/appNav.js";
 
 defineProps({
   t: { type: Function, required: true },
@@ -26,20 +26,20 @@ const items = computed(() => [
     id: "gitlab",
     title: "gitlabVariables",
     icon: GitlabOutlined,
-    onClick: () => (mode.value === "gitlab" ? goHome() : goGitlab()),
+    onClick: goGitlab,
   },
   {
     id: "ports",
     title: "portManagerTitle",
     icon: ApiOutlined,
-    onClick: () => (mode.value === "ports" ? goHome() : goPorts()),
+    onClick: goPorts,
   },
   {
     id: "settings",
     title: "settings",
     icon: SettingOutlined,
     bottom: true,
-    onClick: () => (mode.value === "settings" ? goHome() : goSettings()),
+    onClick: goSettings,
   },
 ]);
 
@@ -49,41 +49,56 @@ const bottomItems = computed(() => items.value.filter((item) => item.bottom));
 
 <template>
   <nav class="app-rail" aria-label="main">
-    <button
+    <a-tooltip
       v-for="item in topItems"
       :key="item.id"
-      type="button"
-      class="app-rail-btn"
-      :class="{ active: mode === item.id }"
       :title="t(item.title)"
-      @click="item.onClick"
+      placement="right"
+      :mouse-enter-delay="0.2"
     >
-      <component :is="item.icon" class="app-rail-icon" />
-    </button>
-    <div class="app-rail-gap" />
-    <button
-      v-for="item in bottomItems"
-      :key="item.id"
-      type="button"
-      class="app-rail-btn"
-      :class="{ active: mode === item.id }"
-      :title="t(item.title)"
-      @click="item.onClick"
-    >
-      <component :is="item.icon" class="app-rail-icon" />
-    </button>
-    <a-badge class="app-rail-update" :dot="updateAvailable" :offset="[-4, 6]">
       <button
         type="button"
         class="app-rail-btn"
-        :class="{ loading: updateChecking }"
-        :title="`${t('checkForUpdate')} · v${appVersion}`"
-        :disabled="updateChecking"
-        @click="onCheckUpdate"
+        :class="{ active: mode === item.id }"
+        @click="item.onClick"
       >
-        <CloudDownloadOutlined class="app-rail-icon" />
+        <component :is="item.icon" class="app-rail-icon" />
       </button>
-    </a-badge>
+    </a-tooltip>
+    <div class="app-rail-gap" />
+    <a-tooltip
+      v-for="item in bottomItems"
+      :key="item.id"
+      :title="t(item.title)"
+      placement="right"
+      :mouse-enter-delay="0.2"
+    >
+      <button
+        type="button"
+        class="app-rail-btn"
+        :class="{ active: mode === item.id }"
+        @click="item.onClick"
+      >
+        <component :is="item.icon" class="app-rail-icon" />
+      </button>
+    </a-tooltip>
+    <a-tooltip
+      :title="`${t('checkForUpdate')} · v${appVersion}`"
+      placement="right"
+      :mouse-enter-delay="0.2"
+    >
+      <a-badge class="app-rail-update" :dot="updateAvailable" :offset="[-4, 6]">
+        <button
+          type="button"
+          class="app-rail-btn"
+          :class="{ loading: updateChecking }"
+          :disabled="updateChecking"
+          @click="onCheckUpdate"
+        >
+          <CloudDownloadOutlined class="app-rail-icon" />
+        </button>
+      </a-badge>
+    </a-tooltip>
   </nav>
 </template>
 
