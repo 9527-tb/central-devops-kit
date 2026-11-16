@@ -61,6 +61,12 @@ pub fn run() {
             commands::initialize_runtime_settings,
             commands::exit_app,
             commands::gitlab_load_variables,
+            commands::gitlab_list_projects,
+            commands::gitlab_list_pipelines,
+            commands::gitlab_list_branches,
+            commands::gitlab_create_pipeline,
+            commands::gitlab_list_jobs,
+            commands::gitlab_run_job,
             commands::ports_lookup,
             commands::ports_kill,
         ])

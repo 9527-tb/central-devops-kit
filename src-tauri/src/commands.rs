@@ -38,6 +38,61 @@ pub async fn gitlab_load_variables(
 }
 
 #[tauri::command]
+pub async fn gitlab_list_projects(token: String, group_url: String) -> crate::gitlab::GitlabProjectsResult {
+    crate::gitlab::list_projects(token, group_url).await
+}
+
+#[tauri::command]
+pub async fn gitlab_list_pipelines(
+    token: String,
+    group_url: String,
+    project_id: u64,
+) -> crate::gitlab::GitlabPipelinesResult {
+    crate::gitlab::list_pipelines(token, group_url, project_id).await
+}
+
+#[tauri::command]
+pub async fn gitlab_list_branches(
+    token: String,
+    group_url: String,
+    project_id: u64,
+    search: String,
+) -> crate::gitlab::GitlabBranchesResult {
+    crate::gitlab::list_branches(token, group_url, project_id, search).await
+}
+
+#[tauri::command]
+pub async fn gitlab_create_pipeline(
+    token: String,
+    group_url: String,
+    project_id: u64,
+    git_ref: String,
+) -> crate::gitlab::GitlabPipelinesResult {
+    crate::gitlab::create_pipeline(token, group_url, project_id, git_ref).await
+}
+
+#[tauri::command]
+pub async fn gitlab_list_jobs(
+    token: String,
+    group_url: String,
+    project_id: u64,
+    pipeline_id: u64,
+) -> crate::gitlab::GitlabJobsResult {
+    crate::gitlab::list_jobs(token, group_url, project_id, pipeline_id).await
+}
+
+#[tauri::command]
+pub async fn gitlab_run_job(
+    token: String,
+    group_url: String,
+    project_id: u64,
+    job_id: u64,
+    action: String,
+) -> crate::gitlab::GitlabJobsResult {
+    crate::gitlab::run_job(token, group_url, project_id, job_id, action).await
+}
+
+#[tauri::command]
 pub fn ports_lookup(query: String, fuzzy: bool) -> Result<Vec<crate::ports::PortOccupant>, String> {
     crate::ports::lookup_port(&query, fuzzy)
 }

@@ -2,16 +2,17 @@
 
 A desktop app. The stack matches DevKit: Tauri 2, Vue 3, Vite, and antdv-next. It runs on **macOS, Windows, and Linux**. The interface is available in Simplified Chinese, Traditional Chinese, English, and Japanese.
 
-It currently includes GitLab variable comparison, port lookup, settings and a tray icon, and in-app updates. DevKit’s workbench, run plans, and project scan are not included.
+It currently includes GitLab variable comparison, GitLab pipelines, port lookup, settings and a tray icon, and in-app updates. DevKit’s workbench, run plans, and project scan are not included.
 
 ## Features
 
-- **GitLab variables.** Enter a group URL and an access token, then load variables and compare `connect-staging` with `connect-production` side by side. Missing keys and differing values are visible, and names or values can be copied.
+- **GitLab Variables.** Enter a group URL and an access token, then load variables and compare `connect-staging` with `connect-production` side by side. Missing keys and differing values are visible, and names or values can be copied.
+- **GitLab Pipeline.** Uses the same group URL and access token. Choose a project in the group, including subgroups, then see that project's pipelines. New Pipeline runs on the selected project and branch. Open a pipeline to see each task's status, and run a manual or finished task from the app.
 - **Port lookup.** Find the process listening on a port. An exact query matches 1–65535. With fuzzy match, `80` also matches `8080` and `18080`. After confirmation, that process can be stopped. macOS and Linux use `lsof`. Windows uses `netstat`.
 - **Settings.** Theme, language, launch at login, close to tray, and check for updates on startup. Closing the window can hide it in the tray. The window uses the system title bar.
 - **In-app updates.** The app checks about 3 seconds after launch. The same check is available from the left rail and from Settings. A newer version opens a dialog; confirming it downloads, installs, and restarts the app.
 
-The left rail lists GitLab variables and port lookup, then Settings at the bottom, then Check for updates. Hovering an icon shows its name. The current page stays selected.
+The left rail lists GitLab Variables, GitLab Pipeline, and port lookup, then Settings at the bottom, then Check for updates. Hovering an icon shows its name. The current page stays selected.
 
 ## Start
 
