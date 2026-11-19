@@ -54,11 +54,35 @@ pub struct GitlabSettings {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
+pub struct GcpWhitelistEntry {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub cidr: String,
+    #[serde(default)]
+    pub note: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GcpSettings {
+    #[serde(default)]
+    pub project_path: String,
+    #[serde(default)]
+    pub entries: Vec<GcpWhitelistEntry>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     #[serde(default)]
     pub general: GeneralSettings,
     #[serde(default)]
     pub gitlab: GitlabSettings,
+    #[serde(default)]
+    pub gcp: GcpSettings,
 }
 
 pub fn settings_file_exists() -> Result<bool, String> {

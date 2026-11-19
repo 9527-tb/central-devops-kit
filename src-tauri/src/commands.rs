@@ -101,3 +101,39 @@ pub fn ports_lookup(query: String, fuzzy: bool) -> Result<Vec<crate::ports::Port
 pub fn ports_kill(pid: u32) -> Result<(), String> {
     crate::ports::kill_process(pid)
 }
+
+#[tauri::command]
+pub fn gcp_inspect_project(path: String) -> crate::gcp::GcpInspectResult {
+    crate::gcp::inspect_project(&path)
+}
+
+#[tauri::command]
+pub fn gcp_add_whitelist_ip(
+    path: String,
+    cidr: String,
+    comment: String,
+    keys: Vec<String>,
+) -> crate::gcp::GcpAddResult {
+    crate::gcp::add_whitelist_ip(&path, &cidr, &comment, &keys)
+}
+
+#[tauri::command]
+pub fn gcp_save_whitelist_files(
+    path: String,
+    files: Vec<crate::gcp::GcpSaveFile>,
+) -> crate::gcp::GcpSaveResult {
+    crate::gcp::save_whitelist_files(&path, &files)
+}
+
+#[tauri::command]
+pub fn gcp_apply_whitelist(app: tauri::AppHandle, path: String, keys: Vec<String>) -> crate::gcp::GcpApplyResult {
+    std::thread::spawn(move || {
+        let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::gcp::apply_whitelist(&app, &path, &keys);
+        }));
+        if panicked.is_err() {
+            crate::gcp::emit_apply_done(&app, "执行过程发生异常，已停止", "error");
+        }
+    });
+    crate::gcp::GcpApplyResult { code: "started".into() }
+}

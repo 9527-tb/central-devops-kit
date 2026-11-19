@@ -2,17 +2,18 @@
 
 A desktop app. The stack matches DevKit: Tauri 2, Vue 3, Vite, and antdv-next. It runs on **macOS, Windows, and Linux**. The interface is available in Simplified Chinese, Traditional Chinese, English, and Japanese.
 
-It currently includes GitLab variable comparison, GitLab pipelines, port lookup, settings and a tray icon, and in-app updates. DevKit’s workbench, run plans, and project scan are not included.
+It currently includes GitLab variable comparison, GitLab pipelines, a GCP whitelist, port lookup, settings and a tray icon, and in-app updates. DevKit’s workbench, run plans, and project scan are not included.
 
 ## Features
 
 - **GitLab Variables.** Enter a group URL and an access token, then load variables and compare `connect-staging` with `connect-production` side by side. Missing keys and differing values are visible, and names or values can be copied.
 - **GitLab Pipeline.** Uses the same group URL and access token. Choose a project in the group, including subgroups, then see that project's pipelines. New Pipeline runs on the selected project and branch. Open a pipeline to see each task's status, and run a manual or finished task from the app.
+- **GCP WhiteList.** Choose the local central-devops checkout. It must be on `master`, and these four files must all be present: `deploy/mclinica-connect-prod/psplink-ip-whitelist-production.yaml`, `deploy/mclinica-connect-staging/psplink-ip-whitelist-staging.yaml`, `deploy/psplink-indo-prod/psplink-ip-whitelist-production.yaml`, and `deploy/psplink-indo-staging/psplink-ip-whitelist-staging.yaml`. Each file's `notRemoteIpBlocks` list is shown in its own column, sorted from the smallest IP address to the largest. Matching IPs line up across the columns. A column that does not have an IP shows a blank cell. New, copy, and delete stay on the page until Save to files. Unsaved additions and copies are marked with a red asterisk. Unsaved deletions stay visible with a red strikethrough. Saving writes each column, sorted from the smallest IP to the largest, back to its YAML file.
 - **Port lookup.** Find the process listening on a port. An exact query matches 1–65535. With fuzzy match, `80` also matches `8080` and `18080`. After confirmation, that process can be stopped. macOS and Linux use `lsof`. Windows uses `netstat`.
 - **Settings.** Theme, language, launch at login, close to tray, and check for updates on startup. Closing the window can hide it in the tray. The window uses the system title bar.
 - **In-app updates.** The app checks about 3 seconds after launch. The same check is available from the left rail and from Settings. A newer version opens a dialog; confirming it downloads, installs, and restarts the app.
 
-The left rail lists GitLab Variables, GitLab Pipeline, and port lookup, then Settings at the bottom, then Check for updates. Hovering an icon shows its name. The current page stays selected.
+The left rail opens on port lookup. After that it lists GitLab Variables, GitLab Pipeline, and GCP WhiteList, then Settings at the bottom, then Check for updates. Hovering an icon shows its name. The current page stays selected.
 
 ## Start
 

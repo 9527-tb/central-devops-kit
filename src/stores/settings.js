@@ -25,6 +25,23 @@ export function emptySettings() {
       accessToken: "",
       groupUrl: "",
     },
+    gcp: {
+      projectPath: "",
+      entries: [],
+    },
+  };
+}
+
+function normalizeWhitelistEntry(item) {
+  if (!item || typeof item !== "object") return null;
+  const name = String(item.name || "").trim();
+  const cidr = String(item.cidr || "").trim();
+  if (!name || !cidr) return null;
+  return {
+    id: String(item.id || ""),
+    name,
+    cidr,
+    note: String(item.note || "").trim(),
   };
 }
 
@@ -49,6 +66,12 @@ export function normalizeSettings(raw) {
       accessToken:
         typeof raw.gitlab?.accessToken === "string" ? raw.gitlab.accessToken : "",
       groupUrl: typeof raw.gitlab?.groupUrl === "string" ? raw.gitlab.groupUrl : "",
+    },
+    gcp: {
+      projectPath: typeof raw.gcp?.projectPath === "string" ? raw.gcp.projectPath : "",
+      entries: Array.isArray(raw.gcp?.entries)
+        ? raw.gcp.entries.map(normalizeWhitelistEntry).filter(Boolean)
+        : [],
     },
   };
 }

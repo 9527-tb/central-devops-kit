@@ -5,6 +5,7 @@
 //! - `invoke_handler`：前端 IPC（实现见 `commands`）
 
 mod commands;
+mod gcp;
 mod gitlab;
 mod platform;
 mod ports;
@@ -69,6 +70,10 @@ pub fn run() {
             commands::gitlab_run_job,
             commands::ports_lookup,
             commands::ports_kill,
+            commands::gcp_inspect_project,
+            commands::gcp_add_whitelist_ip,
+            commands::gcp_save_whitelist_files,
+            commands::gcp_apply_whitelist,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

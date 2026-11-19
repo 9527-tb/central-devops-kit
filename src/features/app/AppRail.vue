@@ -4,8 +4,8 @@
 -->
 <script setup>
 import { computed, inject } from "vue";
-import { ApiOutlined, CloudDownloadOutlined, DeploymentUnitOutlined, GitlabOutlined, SettingOutlined } from "@antdv-next/icons";
-import { appMode, goGitlab, goPipeline, goPorts, goSettings } from "../../stores/appNav.js";
+import { ApiOutlined, CloudDownloadOutlined, DeploymentUnitOutlined, GitlabOutlined, GoogleOutlined, SettingOutlined } from "@antdv-next/icons";
+import { appMode, goGcp, goGitlab, goPipeline, goPorts, goSettings } from "../../stores/appNav.js";
 
 defineProps({
   t: { type: Function, required: true },
@@ -23,6 +23,12 @@ function onCheckUpdate() {
 
 const items = computed(() => [
   {
+    id: "ports",
+    title: "portManagerTitle",
+    icon: ApiOutlined,
+    onClick: goPorts,
+  },
+  {
     id: "gitlab",
     title: "gitlabVariables",
     icon: GitlabOutlined,
@@ -35,10 +41,10 @@ const items = computed(() => [
     onClick: goPipeline,
   },
   {
-    id: "ports",
-    title: "portManagerTitle",
-    icon: ApiOutlined,
-    onClick: goPorts,
+    id: "gcp",
+    title: "gcpWhiteList",
+    icon: GoogleOutlined,
+    onClick: goGcp,
   },
   {
     id: "settings",
