@@ -810,8 +810,8 @@ fn resolve_tool(app: &tauri::AppHandle, name: &str) -> Option<PathBuf> {
         emit_log(app, format!("在常见安装目录找到 {name}：{}", path.display()), "ok");
         return Some(path);
     }
-    let fallback = if cfg!(windows) { "where" } else { "登录 shell" };
-    emit_log(app, format!("PATH 和常见目录里没有 {name}，改用 {fallback} 查找，最多等 5 秒"), "warn");
+    let fallback = if cfg!(windows) { "where" } else { "交互式登录 shell" };
+    emit_log(app, format!("PATH 和常见目录里没有 {name}，改用 {fallback} 查找，最多等 8 秒"), "warn");
     if let Some(path_env) = std::env::var_os("PATH") {
         emit_log(app, format!("当前 PATH：{}", path_env.to_string_lossy()), "out");
     }
@@ -821,7 +821,7 @@ fn resolve_tool(app: &tauri::AppHandle, name: &str) -> Option<PathBuf> {
             Some(path)
         }
         None => {
-            emit_log(app, format!("找不到 {name} 命令，已停止"), "error");
+            emit_log(app, missing_tool_message(name), "error");
             None
         }
     }
@@ -864,7 +864,7 @@ fn known_tool_dirs() -> Vec<PathBuf> {
     for key in ["HOME", "USERPROFILE"] {
         if let Some(value) = std::env::var_os(key) {
             let home = PathBuf::from(value);
-            dirs.push(home.join("google-cloud-sdk/bin"));
+            dirs.extend(cloud_sdk_dirs(&home));
             dirs.push(home.join("bin"));
             dirs.push(home.join(".local/bin"));
             dirs.push(home.join("AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin"));
@@ -873,6 +873,27 @@ fn known_tool_dirs() -> Vec<PathBuf> {
         }
     }
     dirs
+}
+
+/// 官方安装器默认写到家目录，自定义前缀常见于 software、Downloads。
+fn cloud_sdk_dirs(home: &Path) -> Vec<PathBuf> {
+    [
+        "google-cloud-sdk/bin",
+        "software/google-cloud-sdk/bin",
+        "Downloads/google-cloud-sdk/bin",
+        "sdk/google-cloud-sdk/bin",
+        "src/google-cloud-sdk/bin",
+        "tools/google-cloud-sdk/bin",
+        "opt/google-cloud-sdk/bin",
+        ".google-cloud-sdk/bin",
+    ]
+    .into_iter()
+    .map(|relative| home.join(relative))
+    .collect()
+}
+
+fn missing_tool_message(name: &str) -> String {
+    format!("找不到 {name} 命令。打包后的应用没有终端 PATH，已检查系统 PATH、常见安装目录，以及会读取 ~/.zshrc 或 ~/.bashrc 的交互式登录 shell")
 }
 
 fn tool_in_path(name: &str) -> Option<PathBuf> {
@@ -911,19 +932,47 @@ fn tool_in_login_shell(name: &str) -> Option<PathBuf> {
 
 fn command_lookup_text(name: &str) -> Option<String> {
     #[cfg(windows)]
-    let mut child = Command::new("where.exe").arg(name).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
+    {
+        let mut child = Command::new("where.exe").arg(name).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
+        return read_child_text(&mut child, Duration::from_secs(8));
+    }
     #[cfg(not(windows))]
-    let mut child = {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
-        Command::new(shell)
-            .args(["-lc", &format!("command -v {name}")])
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .ok()?
-    };
-    read_child_text(&mut child, Duration::from_secs(5))
+    {
+        let script = format!("command -v {name}");
+        for shell in lookup_shells() {
+            if !Path::new(&shell).is_file() {
+                continue;
+            }
+            let mut command = Command::new(&shell);
+            command.args(shell_lookup_args(&shell)).arg(&script).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
+            let Some(mut child) = command.spawn().ok() else { continue };
+            let Some(text) = read_child_text(&mut child, Duration::from_secs(8)) else { continue };
+            if text.lines().any(|line| PathBuf::from(line.trim()).is_file()) {
+                return Some(text);
+            }
+        }
+        None
+    }
+}
+
+fn lookup_shells() -> Vec<String> {
+    let mut shells = Vec::new();
+    if let Ok(shell) = std::env::var("SHELL") {
+        if !shell.is_empty() {
+            shells.push(shell);
+        }
+    }
+    for fallback in ["/bin/zsh", "/bin/bash", "/bin/sh"] {
+        if !shells.iter().any(|item| item == fallback) {
+            shells.push(fallback.to_string());
+        }
+    }
+    shells
+}
+
+/// 打包后的应用 PATH 只有 /usr/bin:/bin。gcloud 安装器把路径写进 ~/.zshrc，必须用交互式登录 shell 才能读到。
+fn shell_lookup_args(shell: &str) -> Vec<&'static str> {
+    if shell.ends_with("fish") { vec!["-l", "-c"] } else { vec!["-lic"] }
 }
 
 fn read_child_text(child: &mut std::process::Child, timeout: Duration) -> Option<String> {
@@ -1416,15 +1465,17 @@ pub fn fetch_whitelist_from_gcp(app: &tauri::AppHandle, path: &str) {
         return;
     }
     let Some(gcloud) = find_tool("gcloud") else {
+        let message = missing_tool_message("gcloud");
         for env in APPLY_ENVS {
-            emit_fetch(app, env.key, "error", "找不到 gcloud 命令", "找不到 gcloud 命令", true, false);
+            emit_fetch(app, env.key, "error", "找不到 gcloud 命令", &message, true, false);
         }
         emit_fetch_done(app, "找不到 gcloud 命令，已停止");
         return;
     };
     let Some(kubectl) = find_tool("kubectl") else {
+        let message = missing_tool_message("kubectl");
         for env in APPLY_ENVS {
-            emit_fetch(app, env.key, "error", "找不到 kubectl 命令", "找不到 kubectl 命令", true, false);
+            emit_fetch(app, env.key, "error", "找不到 kubectl 命令", &message, true, false);
         }
         emit_fetch_done(app, "找不到 kubectl 命令，已停止");
         return;
@@ -1834,6 +1885,21 @@ spec:
         assert_eq!(line_tone("stderr", "ERROR: (gcloud) You do not currently have an active account selected."), "error");
         assert_eq!(line_tone("stderr", "WARNING: Could not setup log file"), "warn");
         assert_eq!(line_tone("stdout", "Client Version: v1.36.1"), "out");
+    }
+
+    #[test]
+    fn cloud_sdk_dirs_include_custom_software_prefix() {
+        let home = Path::new("/Users/example");
+        let dirs = cloud_sdk_dirs(home);
+        assert!(dirs.iter().any(|dir| dir == &home.join("software/google-cloud-sdk/bin")));
+        assert!(dirs.iter().any(|dir| dir == &home.join("google-cloud-sdk/bin")));
+    }
+
+    #[test]
+    fn packaged_app_reads_zshrc_with_interactive_login_shell() {
+        assert_eq!(shell_lookup_args("/bin/zsh"), vec!["-lic"]);
+        assert_eq!(shell_lookup_args("/bin/bash"), vec!["-lic"]);
+        assert_eq!(shell_lookup_args("/opt/homebrew/bin/fish"), vec!["-l", "-c"]);
     }
 
     #[test]
