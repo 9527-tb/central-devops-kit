@@ -39,3 +39,8 @@ export function applyGcpWhitelist(path, keys) {
     keys,
   });
 }
+
+/** @param {string} path */
+export function fetchGcpWhitelist(path) {
+  return invokeSafe("gcp_fetch_whitelist", { path: String(path ?? "") });
+}

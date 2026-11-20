@@ -126,6 +126,19 @@ pub fn gcp_save_whitelist_files(
 }
 
 #[tauri::command]
+pub fn gcp_fetch_whitelist(app: tauri::AppHandle, path: String) -> crate::gcp::GcpApplyResult {
+    std::thread::spawn(move || {
+        let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::gcp::fetch_whitelist_from_gcp(&app, &path);
+        }));
+        if panicked.is_err() {
+            crate::gcp::emit_fetch_done(&app, "查询过程发生异常，已停止");
+        }
+    });
+    crate::gcp::GcpApplyResult { code: "started".into() }
+}
+
+#[tauri::command]
 pub fn gcp_apply_whitelist(app: tauri::AppHandle, path: String, keys: Vec<String>) -> crate::gcp::GcpApplyResult {
     std::thread::spawn(move || {
         let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

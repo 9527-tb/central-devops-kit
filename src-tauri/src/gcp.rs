@@ -1256,6 +1256,244 @@ fn finish(app: &tauri::AppHandle, text: &str, tone: &str, code: &str) -> GcpAppl
     GcpApplyResult { code: code.to_string() }
 }
 
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GcpFetchUpdate {
+    key: String,
+    status: String,
+    message: String,
+    yaml: String,
+    replace_yaml: bool,
+    done: bool,
+}
+
+fn emit_fetch_to(app: &tauri::AppHandle, key: &str, status: &str, message: impl AsRef<str>, yaml: &str, replace_yaml: bool, done: bool) {
+    if key.is_empty() && !done {
+        let text = message.as_ref().to_string();
+        for env in APPLY_ENVS {
+            emit_fetch(app, env.key, status, &text, yaml, replace_yaml, false);
+        }
+        return;
+    }
+    emit_fetch(app, key, status, message, yaml, replace_yaml, done);
+}
+
+fn emit_fetch(app: &tauri::AppHandle, key: &str, status: &str, message: impl AsRef<str>, yaml: &str, replace_yaml: bool, done: bool) {
+    let _ = app.emit(
+        "gcp-fetch-update",
+        GcpFetchUpdate {
+            key: key.to_string(),
+            status: status.to_string(),
+            message: message.as_ref().to_string(),
+            yaml: yaml.to_string(),
+            replace_yaml,
+            done,
+        },
+    );
+}
+
+pub fn emit_fetch_done(app: &tauri::AppHandle, message: &str) {
+    emit_fetch(app, "", "error", message, "", false, true);
+}
+
+struct CommandCapture {
+    ok: bool,
+    stdout: String,
+    stderr: String,
+}
+
+fn run_capture(app: &tauri::AppHandle, key: &str, display: &str, bin: &Path, args: &[&str], cwd: Option<&Path>) -> CommandCapture {
+    let started = Instant::now();
+    let (mut command, _) = tool_command(bin, args);
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("CLOUDSDK_CORE_DISABLE_PROMPTS", "1")
+        .env("CLOUDSDK_COMPONENT_MANAGER_DISABLE_UPDATE_CHECK", "1")
+        .env("CLOUDSDK_CORE_DISABLE_USAGE_REPORTING", "1");
+    if let Some(dir) = cwd {
+        command.current_dir(dir);
+    }
+    prepend_bin_path(&mut command, bin);
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            return CommandCapture { ok: false, stdout: String::new(), stderr: format!("无法启动 {display}：{error}") };
+        }
+    };
+    let pid = child.id();
+    emit_fetch_to(app, key, "running", format!("{display} 已启动，进程号 {pid}"), "", false, false);
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let stdout_thread = thread::spawn(move || stdout.map(read_to_string).unwrap_or_default());
+    let stderr_thread = thread::spawn(move || stderr.map(read_to_string).unwrap_or_default());
+    let (stop_tx, stop_rx) = mpsc::channel::<()>();
+    let app_beat = app.clone();
+    let beat_key = key.to_string();
+    let beat_name = display.to_string();
+    let beat_thread = thread::spawn(move || {
+        let mut waited = 0u64;
+        loop {
+            match stop_rx.recv_timeout(Duration::from_secs(5)) {
+                Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    waited += 5;
+                    emit_fetch_to(
+                        &app_beat,
+                        &beat_key,
+                        "running",
+                        format!("{beat_name} 仍在执行，已等待 {waited} 秒"),
+                        "",
+                        false,
+                        false,
+                    );
+                }
+            }
+        }
+    });
+    let status = match child.wait() {
+        Ok(status) => status,
+        Err(error) => {
+            let _ = stop_tx.send(());
+            let _ = stdout_thread.join();
+            let _ = stderr_thread.join();
+            let _ = beat_thread.join();
+            return CommandCapture { ok: false, stdout: String::new(), stderr: format!("等待 {display} 结束失败：{error}") };
+        }
+    };
+    let _ = stop_tx.send(());
+    let stdout = stdout_thread.join().unwrap_or_default();
+    let stderr = stderr_thread.join().unwrap_or_default();
+    let _ = beat_thread.join();
+    let elapsed = format!("{:.1} 秒", started.elapsed().as_secs_f32());
+    if status.success() {
+        emit_fetch_to(app, key, "running", format!("{display} 完成，用时 {elapsed}"), "", false, false);
+        CommandCapture { ok: true, stdout, stderr }
+    } else {
+        let code = status.code().map(|value| value.to_string()).unwrap_or_else(|| "信号中断".into());
+        let mut detail = stderr.trim().to_string();
+        if detail.is_empty() {
+            detail = stdout.trim().to_string();
+        }
+        if let Some(reason) = explain_failure(&detail) {
+            detail = format!("{detail}\n\n{reason}");
+        }
+        if detail.is_empty() {
+            detail = format!("{display} 失败，退出码 {code}，用时 {elapsed}");
+        } else {
+            detail = format!("{detail}\n\n{display} 失败，退出码 {code}，用时 {elapsed}");
+        }
+        CommandCapture { ok: false, stdout, stderr: detail }
+    }
+}
+
+fn read_to_string<R: Read>(reader: R) -> String {
+    let mut reader = BufReader::new(reader);
+    let mut all = String::new();
+    let mut line = String::new();
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) | Err(_) => break,
+            Ok(_) => all.push_str(&line),
+        }
+    }
+    all
+}
+
+fn fetch_get_args(env: &ApplyEnv) -> Vec<String> {
+    vec!["kubectl".into(), "get".into(), "-f".into(), env.relative.into(), "-o".into(), "yaml".into()]
+}
+
+pub fn fetch_whitelist_from_gcp(app: &tauri::AppHandle, path: &str) {
+    let root = PathBuf::from(path);
+    if !root.is_dir() {
+        for env in APPLY_ENVS {
+            emit_fetch(app, env.key, "error", "项目路径不是目录", "项目路径不是目录", true, false);
+        }
+        emit_fetch_done(app, "项目路径不是目录，已停止");
+        return;
+    }
+    let Some(gcloud) = find_tool("gcloud") else {
+        for env in APPLY_ENVS {
+            emit_fetch(app, env.key, "error", "找不到 gcloud 命令", "找不到 gcloud 命令", true, false);
+        }
+        emit_fetch_done(app, "找不到 gcloud 命令，已停止");
+        return;
+    };
+    let Some(kubectl) = find_tool("kubectl") else {
+        for env in APPLY_ENVS {
+            emit_fetch(app, env.key, "error", "找不到 kubectl 命令", "找不到 kubectl 命令", true, false);
+        }
+        emit_fetch_done(app, "找不到 kubectl 命令，已停止");
+        return;
+    };
+    for env in APPLY_ENVS {
+        emit_fetch(app, env.key, "running", format!("检查 gcloud：{}", gcloud.display()), "", true, false);
+    }
+    let gcloud_check = run_capture(app, "", "gcloud", &gcloud, &["version"], None);
+    if !gcloud_check.ok {
+        let detail = if gcloud_check.stderr.is_empty() { "gcloud version 失败，已停止".into() } else { gcloud_check.stderr };
+        for env in APPLY_ENVS {
+            emit_fetch(app, env.key, "error", "gcloud 不可用", &detail, true, false);
+        }
+        emit_fetch_done(app, "gcloud 不可用，已停止");
+        return;
+    }
+    for env in APPLY_ENVS {
+        emit_fetch(app, env.key, "running", format!("检查 kubectl：{}", kubectl.display()), "", false, false);
+    }
+    let kubectl_check = run_capture(app, "", "kubectl", &kubectl, &["version", "--client"], None);
+    if !kubectl_check.ok {
+        let detail = if kubectl_check.stderr.is_empty() { "kubectl version --client 失败，已停止".into() } else { kubectl_check.stderr };
+        for env in APPLY_ENVS {
+            emit_fetch(app, env.key, "error", "kubectl 不可用", &detail, true, false);
+        }
+        emit_fetch_done(app, "kubectl 不可用，已停止");
+        return;
+    }
+    for env in APPLY_ENVS {
+        let file = root.join(env.relative);
+        emit_fetch(app, env.key, "running", format!("准备查询 {}", env.relative), "", true, false);
+        if !file.is_file() {
+            let message = format!("找不到 {}", file.display());
+            emit_fetch(app, env.key, "error", &message, &message, true, false);
+            continue;
+        }
+        let context_args = ["config", "use-context", env.context];
+        emit_fetch(app, env.key, "running", format!("$ kubectl config use-context {}", env.context), "", false, false);
+        let context = run_capture(app, env.key, "kubectl", &kubectl, &context_args, Some(&root));
+        if !context.ok {
+            emit_fetch(app, env.key, "error", "切换 context 失败，已跳过查询", &context.stderr, true, false);
+            continue;
+        }
+        let project_args = ["config", "set", "project", env.project];
+        emit_fetch(app, env.key, "running", format!("$ gcloud config set project {}", env.project), "", false, false);
+        let project = run_capture(app, env.key, "gcloud", &gcloud, &project_args, Some(&root));
+        if !project.ok {
+            emit_fetch(app, env.key, "error", "切换 project 失败，已跳过查询", &project.stderr, true, false);
+            continue;
+        }
+        let get_args = fetch_get_args(env);
+        let get_refs: Vec<&str> = get_args.iter().skip(1).map(String::as_str).collect();
+        emit_fetch(app, env.key, "running", format!("$ kubectl get -f {} -o yaml", env.relative), "", false, false);
+        let fetched = run_capture(app, env.key, "kubectl", &kubectl, &get_refs, Some(&root));
+        if fetched.ok {
+            let yaml = fetched.stdout.trim_end().to_string();
+            let message = if fetched.stderr.trim().is_empty() {
+                format!("已读取 {}", env.relative)
+            } else {
+                format!("已读取 {}。{}", env.relative, fetched.stderr.trim())
+            };
+            emit_fetch(app, env.key, "ok", message, &yaml, true, false);
+        } else {
+            emit_fetch(app, env.key, "error", "查询失败", &fetched.stderr, true, false);
+        }
+    }
+    emit_fetch(app, "", "ok", "四个环境已查询结束", "", false, true);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1571,6 +1809,21 @@ spec:
             assert_eq!(shown[2][1], "apply");
             assert_eq!(shown[2][2], "-f");
             assert!(shown[2][3].ends_with(relative));
+        }
+    }
+
+    #[test]
+    fn fetch_reads_each_environment_yaml_with_kubectl_get() {
+        for env in APPLY_ENVS {
+            let args = fetch_get_args(env);
+            assert_eq!(args, vec![
+                "kubectl".to_string(),
+                "get".into(),
+                "-f".into(),
+                env.relative.into(),
+                "-o".into(),
+                "yaml".into(),
+            ]);
         }
     }
 

@@ -73,6 +73,7 @@ pub fn run() {
             commands::gcp_inspect_project,
             commands::gcp_add_whitelist_ip,
             commands::gcp_save_whitelist_files,
+            commands::gcp_fetch_whitelist,
             commands::gcp_apply_whitelist,
         ])
         .build(tauri::generate_context!())

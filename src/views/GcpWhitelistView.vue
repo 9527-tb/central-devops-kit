@@ -8,7 +8,7 @@ import { message } from "antdv-next";
 import { createTranslator } from "../i18n/index.js";
 import { isTauri } from "../api/tauri.js";
 import { alignIpLists } from "../features/gcp/align.js";
-import { inspectGcpProject, saveGcpWhitelist, applyGcpWhitelist } from "../features/gcp/api.js";
+import { inspectGcpProject, saveGcpWhitelist, applyGcpWhitelist, fetchGcpWhitelist } from "../features/gcp/api.js";
 import { locale, persistSettings, settings, settingsLoading } from "../stores/settings.js";
 import "../styles/settings-layout.css";
 
@@ -46,6 +46,16 @@ const applying = ref(false);
 const applyPhase = ref("");
 const applyWaited = ref(0);
 const applyOutcome = ref("");
+const fetchOpen = ref(false);
+const fetching = ref(false);
+const fetchCols = reactive(FILE_DEFS.map((file) => ({
+  key: file.key,
+  title: file.title,
+  relativePath: file.relativePath,
+  status: "idle",
+  message: "",
+  yaml: "",
+})));
 let applyTimer = 0;
 let commandStarted = 0;
 
@@ -411,6 +421,96 @@ function closeApplyGcp() {
   applyGcpOpen.value = false;
 }
 
+function resetFetchCols() {
+  for (const col of fetchCols) {
+    col.status = "idle";
+    col.message = "";
+    col.yaml = "";
+  }
+}
+
+function openFetchGcp() {
+  fetchOpen.value = true;
+  if (fetching.value) return;
+  resetFetchCols();
+  if (!pathInput.value.trim() || !report.value?.directory) {
+    for (const col of fetchCols) {
+      col.status = "error";
+      col.message = t("gcpProjectRequired");
+      col.yaml = t("gcpProjectRequired");
+    }
+    return;
+  }
+  if (!isTauri) {
+    for (const col of fetchCols) {
+      col.status = "error";
+      col.message = t("gcpDesktopOnly");
+      col.yaml = t("gcpDesktopOnly");
+    }
+    return;
+  }
+  runFetchGcp();
+}
+
+function closeFetchGcp() {
+  fetchOpen.value = false;
+}
+
+function fetchStatusText(status) {
+  if (status === "running") return t("gcpFetchRunning");
+  if (status === "ok") return t("gcpFetchOk");
+  if (status === "error") return t("gcpFetchError");
+  return t("gcpFetchIdle");
+}
+
+async function runFetchGcp() {
+  if (fetching.value) return;
+  fetching.value = true;
+  for (const col of fetchCols) {
+    col.status = "running";
+    col.message = t("gcpFetchPreparing");
+    col.yaml = "";
+  }
+  let finished = false;
+  const finish = (unlisten) => {
+    if (finished) return;
+    finished = true;
+    fetching.value = false;
+    unlisten?.();
+  };
+  let unlisten = () => {};
+  try {
+    const { listen } = await import("@tauri-apps/api/event");
+    unlisten = await listen("gcp-fetch-update", (event) => {
+      const line = event.payload || {};
+      const col = fetchCols.find((item) => item.key === line.key);
+      if (col) {
+        if (line.status) col.status = line.status;
+        if (line.message) col.message = line.message;
+        if (line.replaceYaml) col.yaml = line.yaml || "";
+      }
+      if (line.done) queueMicrotask(() => finish(unlisten));
+    });
+    const result = await fetchGcpWhitelist(pathInput.value.trim());
+    if (!result) {
+      for (const col of fetchCols) {
+        col.status = "error";
+        col.message = t("gcpDesktopOnly");
+        col.yaml = t("gcpDesktopOnly");
+      }
+      finish(unlisten);
+    }
+  } catch (error) {
+    const text = String(error?.message || error);
+    for (const col of fetchCols) {
+      col.status = "error";
+      col.message = text;
+      col.yaml = text;
+    }
+    finish(unlisten);
+  }
+}
+
 function pushApplyLog(text, tone = "out") {
   applyLogs.value.push({ text, tone });
   if (tone === "cmd") {
@@ -590,6 +690,7 @@ async function saveToFiles() {
             {{ t("gcpSave") }}
           </a-button>
           <a-button html-type="button" @click="openApplyGcp">{{ t("gcpApplyGcp") }}</a-button>
+          <a-button html-type="button" :loading="fetching" @click="openFetchGcp">{{ t("gcpFetch") }}</a-button>
         </form>
         <ul v-if="notes.length" class="gcp-notes">
           <li v-for="note in notes" :key="note.text" :class="note.tone">{{ note.text }}</li>
@@ -790,6 +891,29 @@ async function saveToFiles() {
             class="gcp-log-line"
             :class="line.tone ? `is-${line.tone}` : ''"
           >{{ line.text }}</p>
+        </div>
+      </div>
+    </a-modal>
+    <a-modal
+      :open="fetchOpen"
+      class="gcp-apply-modal"
+      :title="t('gcpFetchTitle')"
+      width="92%"
+      :mask-closable="false"
+      :footer="null"
+      @cancel="closeFetchGcp"
+    >
+      <div class="gcp-fetch">
+        <div class="gcp-fetch-grid">
+          <section v-for="col in fetchCols" :key="col.key" class="gcp-fetch-col">
+            <header>
+              <b>{{ col.title }}</b>
+              <span :class="`is-${col.status}`">{{ fetchStatusText(col.status) }}</span>
+              <small>{{ col.relativePath }}</small>
+              <em v-if="col.message">{{ col.message }}</em>
+            </header>
+            <pre>{{ col.yaml || (col.status === "running" ? t("gcpFetchWaiting") : t("gcpFetchEmpty")) }}</pre>
+          </section>
         </div>
       </div>
     </a-modal>
@@ -1115,9 +1239,71 @@ async function saveToFiles() {
   font-weight: 700;
   background: #7f1d1d;
 }
+.gcp-fetch {
+  height: calc(100vh - 180px);
+  min-height: 420px;
+}
+.gcp-fetch-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.gcp-fetch-col {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #1c2430;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #12181f;
+}
+.gcp-fetch-col header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: #1a222c;
+  border-bottom: 1px solid #1c2430;
+}
+.gcp-fetch-col header b {
+  color: #f2f5f8;
+  font-size: 12px;
+}
+.gcp-fetch-col header span,
+.gcp-fetch-col header small,
+.gcp-fetch-col header em {
+  color: #8b98a8;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.35;
+  word-break: break-all;
+}
+.gcp-fetch-col header span.is-running {
+  color: #7dd3fc;
+}
+.gcp-fetch-col header span.is-ok {
+  color: #86efac;
+}
+.gcp-fetch-col header span.is-error {
+  color: #ffd2d2;
+}
+.gcp-fetch-col pre {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  color: #d7e0ea;
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre;
+}
 .gcp-path {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 12px auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto 12px auto auto auto auto;
   gap: 8px;
   align-items: end;
   margin-bottom: 12px;
